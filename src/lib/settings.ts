@@ -94,7 +94,13 @@ export const SETTINGS = {
     schema: z.coerce.number().positive(),
     expects: "an amount in US dollars above 0, such as 1.5",
     group: "Security",
-    doc: "What each workspace's model use may cost in all, such as on a judges' server sharing one Token Factory balance: once it's reached, new tests, quality checks, improvements and scans are refused; the agents' chat still answers",
+    doc: "The most one workspace's model use may cost in all, so on a server sharing one balance (KEEL_SERVER_LIMIT_USD) one account can't use up everyone's: once it's reached, its new tests, quality checks, improvements and scans are refused; its agents' chat still answers",
+  }),
+  KEEL_SERVER_LIMIT_USD: s({
+    schema: z.coerce.number().positive(),
+    expects: "an amount in US dollars above 0, such as 30",
+    group: "Security",
+    doc: "What this server's model use may cost in all, every workspace together, such as a judges' demo sharing one Token Factory balance (Token Factory has no spending cap or balance API of its own): once it's reached, new tests, quality checks, improvements and scans are refused everywhere; the agents' chat still answers",
   }),
 
   SMTP_URL: s({

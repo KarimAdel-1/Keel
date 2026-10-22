@@ -2,14 +2,16 @@
 // kept against the agent and the kind of work it was for, in tokens, with its cost for whoever runs Keel. There are
 // no limits: Keel keeps consumption low itself (lean prompts, the right model for each message, answers kept for
 // repeated questions, early stopping), without making the answers worse. The one exception is for whoever runs a
-// server many share one balance on, such as the judges' (KEEL_ACCOUNT_LIMIT_USD): each workspace may use so much in
-// all, and then starts no more heavy work, while its chat goes on answering.
+// server many share one balance on, such as the judges': Token Factory has no spending cap or balance API, so Keel
+// keeps to one itself, from its own record of what every call cost. The server may use so much in all
+// (KEEL_SERVER_LIMIT_USD), and each workspace at most so much of it (KEEL_ACCOUNT_LIMIT_USD); past either, no more
+// heavy work starts, while the chat goes on answering.
 //
 // Work is metered by running it inside `metered()`: every model call made inside, however deep, is counted for that
 // agent and kind of work (the innermost `metered()` decides the kind), and the meter it hands over adds up the calls.
 
 import { AsyncLocalStorage } from "node:async_hooks";
-import { db } from "@/lib/db";
+import { db, system } from "@/lib/db";
 import { withTenant } from "@/lib/tenant";
 import { observeModelCalls, type ModelCall } from "@/lib/llm";
 import { monthWindow, now } from "@/lib/rows";
@@ -68,19 +70,29 @@ if (!registered.__keelUsageObserver) {
   observeModelCalls(record);
 }
 
-export const LIMIT_REACHED =
-  "This account has used the AI work set aside for it on this server, so new tests, quality checks, improvements and scans can't start. The agent's chat still answers, and every result so far is still here.";
+const STILL = "The agent's chat still answers, and every result so far is still here.";
+export const LIMIT_REACHED = `This account has used its share of the AI work on this server, so new tests, quality checks, improvements and scans can't start. ${STILL}`;
+export const SERVER_LIMIT_REACHED = `This server has used the AI work set aside for it, so new tests, quality checks, improvements and scans can't start. ${STILL}`;
 
 /**
- * On a server with KEEL_ACCOUNT_LIMIT_USD, why the workspace can't start heavy work (tests, test writing, a quality
- * check, an improvement, a scan): what it has used in all has reached the limit. Work already running finishes. The
+ * On a server with KEEL_ACCOUNT_LIMIT_USD or KEEL_SERVER_LIMIT_USD, why the workspace can't start heavy work (tests,
+ * test writing, a quality check, an improvement, a scan): what it has used in all, or what every workspace together
+ * has, has reached the limit. Work already running finishes, so a limit can be passed by what that work costs. The
  * chat is never refused: a reply costs a fraction of a cent, and it's what the agent is for.
  */
 export async function limitReached(workspaceId: string): Promise<string | undefined> {
-  const limit = setting("KEEL_ACCOUNT_LIMIT_USD");
-  if (!limit) return undefined;
-  const used = await db().prepare("SELECT COALESCE(SUM(cost_usd), 0) AS usd FROM usage_events WHERE workspace_id = ?").get<{ usd: number | string }>(workspaceId);
-  return Number(used?.usd ?? 0) >= limit ? LIMIT_REACHED : undefined;
+  const account = setting("KEEL_ACCOUNT_LIMIT_USD");
+  if (account) {
+    const used = await db().prepare("SELECT COALESCE(SUM(cost_usd), 0) AS usd FROM usage_events WHERE workspace_id = ?").get<{ usd: number | string }>(workspaceId);
+    if (Number(used?.usd ?? 0) >= account) return LIMIT_REACHED;
+  }
+  const server = setting("KEEL_SERVER_LIMIT_USD");
+  if (server) {
+    // Keel's own upkeep, across every business: only the total is read.
+    const used = await system().prepare("SELECT COALESCE(SUM(cost_usd), 0) AS usd FROM usage_events").get<{ usd: number | string }>();
+    if (Number(used?.usd ?? 0) >= server) return SERVER_LIMIT_REACHED;
+  }
+  return undefined;
 }
 
 /** Tokens the agent has used this month. */

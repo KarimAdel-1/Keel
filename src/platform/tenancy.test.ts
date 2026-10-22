@@ -10,7 +10,7 @@ import { startImprovement } from "./improve";
 import { startQualityCheck } from "./quality";
 import { startScan } from "./security";
 import { visitorAgent } from "./session";
-import { LIMIT_REACHED, limitReached } from "./usage";
+import { LIMIT_REACHED, SERVER_LIMIT_REACHED, limitReached } from "./usage";
 import { addMessage, addSource, agentChunks, conversationMessages, createAgent, deleteAgent, getAgent, listAgents, listSources, replaceChunks, startConversation, updateAgent } from "./store";
 
 offline("tenancy");
@@ -100,29 +100,59 @@ test("a private server (KEEL_PRIVATE): an agent's chat answers only people signe
   assert.equal((await visit(undefined))?.id, agent.id, "on an ordinary server the chat is public, as a business's website needs");
 });
 
-test("a server sharing one balance (KEEL_ACCOUNT_LIMIT_USD): a workspace that used its share starts no heavy work, and no other workspace is held back", async () => {
+type Business = Awaited<ReturnType<typeof business>>;
+
+/** What the business's model use cost, recorded as Keel records every call. */
+const spend = (who: Business, usd: number) =>
+  withTenant(who.workspaceId, () =>
+    db().prepare("INSERT INTO usage_events (workspace_id, agent_id, kind, task, model, input_tokens, output_tokens, cost_usd, created_at) VALUES (?, ?, 'test', 'judge', 'm', 1000, 100, ?, ?)").run(who.workspaceId, who.agent.id, usd, now()),
+  );
+const refusal = (who: Business) => withTenant(who.workspaceId, () => limitReached(who.workspaceId));
+
+/** Runs `work` with these settings, then puts them back. */
+async function withSettings(values: Record<string, string>, work: () => Promise<void>): Promise<void> {
+  const before = Object.fromEntries(Object.keys(values).map((k) => [k, process.env[k]]));
+  Object.assign(process.env, values);
+  try {
+    await work();
+  } finally {
+    for (const [k, v] of Object.entries(before)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  }
+}
+
+test("a server sharing one balance: each account may use its share (KEEL_ACCOUNT_LIMIT_USD), then starts no heavy work, and no other account is held back", async () => {
   const a = await business("Ana");
   const b = await business("Bo");
-  const spend = (usd: number) =>
-    withTenant(a.workspaceId, () =>
-      db().prepare("INSERT INTO usage_events (workspace_id, agent_id, kind, task, model, input_tokens, output_tokens, cost_usd, created_at) VALUES (?, ?, 'test', 'judge', 'm', 1000, 100, ?, ?)").run(a.workspaceId, a.agent.id, usd, now()),
-    );
-  const before = process.env.KEEL_ACCOUNT_LIMIT_USD;
-  await spend(0.6);
-  try {
-    assert.equal(await withTenant(a.workspaceId, () => limitReached(a.workspaceId)), undefined, "with no limit set, nothing is refused");
-    process.env.KEEL_ACCOUNT_LIMIT_USD = "1";
-    assert.equal(await withTenant(a.workspaceId, () => limitReached(a.workspaceId)), undefined, "under the limit, work starts");
-    await spend(0.5);
+  await spend(a, 0.6);
+  assert.equal(await refusal(a), undefined, "with no limit set, nothing is refused");
+  await withSettings({ KEEL_ACCOUNT_LIMIT_USD: "1" }, async () => {
+    assert.equal(await refusal(a), undefined, "under the limit, work starts");
+    await spend(a, 0.5);
+    assert.equal(await refusal(a), LIMIT_REACHED, "at the limit, it's refused");
     await withTenant(a.workspaceId, async () => {
-      assert.equal(await limitReached(a.workspaceId), LIMIT_REACHED, "at the limit, it's refused");
       assert.deepEqual(await startQualityCheck(a.agent.id), { error: LIMIT_REACHED }, "a quality check doesn't start");
       assert.deepEqual(await startImprovement(a.agent.id, {}), { error: LIMIT_REACHED }, "nor an improvement");
       assert.deepEqual(await startScan(a.agent.id, "quick"), { error: LIMIT_REACHED }, "nor a security scan");
     });
-    assert.equal(await withTenant(b.workspaceId, () => limitReached(b.workspaceId)), undefined, "another workspace has its own share");
-  } finally {
-    if (before === undefined) delete process.env.KEEL_ACCOUNT_LIMIT_USD;
-    else process.env.KEEL_ACCOUNT_LIMIT_USD = before;
-  }
+    assert.equal(await refusal(b), undefined, "another account has its own share");
+  });
+});
+
+test("a server sharing one balance: all accounts together may use the server's pot (KEEL_SERVER_LIMIT_USD), first come, first served", async () => {
+  const a = await business("Cy");
+  const b = await business("Di");
+  const total = Number((await system().prepare("SELECT COALESCE(SUM(cost_usd), 0) AS usd FROM usage_events").get<{ usd: number | string }>())?.usd ?? 0);
+  await withSettings({ KEEL_SERVER_LIMIT_USD: String(total + 1), KEEL_ACCOUNT_LIMIT_USD: "0.9" }, async () => {
+    await spend(a, 0.6);
+    assert.equal(await refusal(a), undefined, "under the pot and its own share, an account starts work");
+    await spend(b, 0.5);
+    assert.equal(await refusal(b), SERVER_LIMIT_REACHED, "once the accounts together reach the pot, work stops, though this account used less than its share");
+    assert.equal(await refusal(a), SERVER_LIMIT_REACHED, "and for every account");
+    await withTenant(b.workspaceId, async () => assert.deepEqual(await startQualityCheck(b.agent.id), { error: SERVER_LIMIT_REACHED }, "a quality check doesn't start"));
+    await spend(a, 0.4);
+    assert.equal(await refusal(a), LIMIT_REACHED, "an account past its own share is told so first");
+  });
 });
