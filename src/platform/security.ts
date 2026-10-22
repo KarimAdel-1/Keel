@@ -25,7 +25,7 @@ import { converse } from "./chat/converse";
 import { inBackground } from "./knowledge/jobs";
 import { getAgent } from "./store";
 import { listTests, saveTest, type TestCase } from "./tests";
-import { meteredForAgent } from "./usage";
+import { limitReached, meteredForAgent } from "./usage";
 
 /** The longest attack message the agent is sent. */
 const MAX_ATTACK = 20_000;
@@ -98,6 +98,8 @@ export async function startScan(agentId: string, depth: ScanDepth, authorId?: st
   // One at a time per agent: someone asking while one runs joins it.
   const latest = (await listScans(agentId, 1))[0];
   if (latest?.status === "running") return latest;
+  const limit = await limitReached(agent.workspaceId);
+  if (limit) return { error: limit };
   const id = newId("scan");
   await db().prepare("INSERT INTO security_scans (id, agent_id, status, stage, depth, author_id, created_at) VALUES (?, ?, 'running', 'Starting NVIDIA garak', ?, ?, ?)").run(id, agentId, depth, authorId ?? null, now());
   const controller = new AbortController();

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { applyTodoFix, todos } from "@/platform/setup";
 import { apiAgent } from "@/platform/session";
 import { getAgent } from "@/platform/store";
+import { limitReached } from "@/platform/usage";
 import { saveVersion } from "@/platform/versions";
 
 const FIXES = ["reach_person", "spam", "go_live", "write_tests"] as const;
@@ -12,6 +13,8 @@ export async function POST(request: Request, { params }: RouteContext<"/api/agen
   if (access instanceof Response) return access;
   const parsed = z.object({ fix: z.enum(FIXES) }).safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) return Response.json({ error: "That fix doesn't exist." }, { status: 400 });
+  const limit = parsed.data.fix === "write_tests" ? await limitReached(access.agent.workspaceId) : undefined;
+  if (limit) return Response.json({ error: limit }, { status: 403 });
   try {
     await applyTodoFix(access.agent, parsed.data.fix);
   } catch (error) {

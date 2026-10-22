@@ -1,11 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { TENANT_TABLES, db, system } from "@/lib/db";
+import { now } from "@/lib/rows";
 import { currentTenant, setTestTenant, withTenant } from "@/lib/tenant";
 import { offline } from "@/testing/live";
 import { signUp } from "./accounts";
 import { getTicket, openTicket } from "./helpdesk";
+import { startImprovement } from "./improve";
+import { startQualityCheck } from "./quality";
+import { startScan } from "./security";
 import { visitorAgent } from "./session";
+import { LIMIT_REACHED, limitReached } from "./usage";
 import { addMessage, addSource, agentChunks, conversationMessages, createAgent, deleteAgent, getAgent, listAgents, listSources, replaceChunks, startConversation, updateAgent } from "./store";
 
 offline("tenancy");
@@ -93,4 +98,31 @@ test("a private server (KEEL_PRIVATE): an agent's chat answers only people signe
     else process.env.KEEL_PRIVATE = before;
   }
   assert.equal((await visit(undefined))?.id, agent.id, "on an ordinary server the chat is public, as a business's website needs");
+});
+
+test("a server sharing one balance (KEEL_ACCOUNT_LIMIT_USD): a workspace that used its share starts no heavy work, and no other workspace is held back", async () => {
+  const a = await business("Ana");
+  const b = await business("Bo");
+  const spend = (usd: number) =>
+    withTenant(a.workspaceId, () =>
+      db().prepare("INSERT INTO usage_events (workspace_id, agent_id, kind, task, model, input_tokens, output_tokens, cost_usd, created_at) VALUES (?, ?, 'test', 'judge', 'm', 1000, 100, ?, ?)").run(a.workspaceId, a.agent.id, usd, now()),
+    );
+  const before = process.env.KEEL_ACCOUNT_LIMIT_USD;
+  await spend(0.6);
+  try {
+    assert.equal(await withTenant(a.workspaceId, () => limitReached(a.workspaceId)), undefined, "with no limit set, nothing is refused");
+    process.env.KEEL_ACCOUNT_LIMIT_USD = "1";
+    assert.equal(await withTenant(a.workspaceId, () => limitReached(a.workspaceId)), undefined, "under the limit, work starts");
+    await spend(0.5);
+    await withTenant(a.workspaceId, async () => {
+      assert.equal(await limitReached(a.workspaceId), LIMIT_REACHED, "at the limit, it's refused");
+      assert.deepEqual(await startQualityCheck(a.agent.id), { error: LIMIT_REACHED }, "a quality check doesn't start");
+      assert.deepEqual(await startImprovement(a.agent.id, {}), { error: LIMIT_REACHED }, "nor an improvement");
+      assert.deepEqual(await startScan(a.agent.id, "quick"), { error: LIMIT_REACHED }, "nor a security scan");
+    });
+    assert.equal(await withTenant(b.workspaceId, () => limitReached(b.workspaceId)), undefined, "another workspace has its own share");
+  } finally {
+    if (before === undefined) delete process.env.KEEL_ACCOUNT_LIMIT_USD;
+    else process.env.KEEL_ACCOUNT_LIMIT_USD = before;
+  }
 });

@@ -90,6 +90,12 @@ export const SETTINGS = {
     doc: "A private server, such as one for judges: only accounts made with `npm run create-account` can use it; no sign-ups or invitations, and the agents' chat answers only people signed in to their workspace",
     default: false,
   }),
+  KEEL_ACCOUNT_LIMIT_USD: s({
+    schema: z.coerce.number().positive(),
+    expects: "an amount in US dollars above 0, such as 1.5",
+    group: "Security",
+    doc: "What each workspace's model use may cost in all, such as on a judges' server sharing one Token Factory balance: once it's reached, new tests, quality checks, improvements and scans are refused; the agents' chat still answers",
+  }),
 
   SMTP_URL: s({
     schema: z.string().regex(/^smtps?:\/\/.+/),

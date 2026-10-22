@@ -34,7 +34,7 @@ import { restoreAction, updateAction } from "./actions";
 import { restoreProcedure, saveProcedure } from "./procedures";
 import { addSource, agentChunks, conversationMessages, getAgent, listConversations, lowConfidenceConversations, updateAgent, type StoredChunk } from "./store";
 import { generateTests, listTests, recentResults, saveExperimentRun, saveTest, playTest, type TestCase } from "./tests";
-import { metered, type Meter } from "./usage";
+import { limitReached, metered, type Meter } from "./usage";
 import { agentFingerprint, saveVersion, snapshotOf } from "./versions";
 import { MAX_NOTES, fixKey, lessonLines, lessonsAboutFix, memoryStore, noteSpace, recall, remember, rememberDecision, type Lesson } from "./memory";
 
@@ -611,6 +611,8 @@ export async function startImprovement(agentId: string, input: { depth?: Depth; 
   // One at a time per agent: someone asking while one runs (a teammate, another judge) joins it instead of paying twice.
   const running = await runningImprovement(agentId);
   if (running) return running;
+  const limit = await limitReached(agent.workspaceId);
+  if (limit) return { error: limit };
   const own = new Set((await listTests(agentId)).map((t) => t.id));
   const focus = [...new Set(input.focus ?? [])].filter((t) => own.has(t));
   const settings: Settings = { ...DEPTHS[input.depth ?? "balanced"], fromConversations: Boolean(input.fromConversations), ...(focus.length ? { focus } : {}) };

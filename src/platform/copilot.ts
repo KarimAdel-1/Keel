@@ -33,7 +33,7 @@ import { listQualityChecks, startQualityCheck } from "./quality";
 import { listScans, startScan } from "./security";
 import { findGaps, listSuggestions } from "./suggestions";
 import { generateTests, latestRuns, listTests, runTests } from "./tests";
-import { metered } from "./usage";
+import { limitReached, metered } from "./usage";
 
 export const SPECIALISTS = {
   analyst: { name: "Analyst", handoff: "Answer a question about how the agent is doing (its answers, knowledge, settings, tests, model use) or what to change, and propose changes to its instructions, rules, I-don't-know message or Q&As." },
@@ -180,6 +180,8 @@ async function run(agent: Agent, message: string, authorId?: string, thread = ""
   };
 
   const tester = async (): Promise<Partial<CopilotFlow>> => {
+    const limit = await limitReached(agent.workspaceId);
+    if (limit) return { reports: [{ by: "tester", text: limit, links: [{ label: "Open Tests", href: `${base}/tests` }] }] };
     let tests = await listTests(agent.id);
     const wrote = tests.length ? 0 : (tests = await generateTests(agent, 8)).length;
     if (!tests.length) return { reports: [{ by: "tester", text: "I couldn't write tests yet: the agent needs some knowledge first (Teach it › What it knows)." }] };

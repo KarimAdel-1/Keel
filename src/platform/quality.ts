@@ -33,7 +33,7 @@ import { businessInformation } from "./knowledge/information";
 import { inBackground } from "./knowledge/jobs";
 import { agentChunks, getAgent } from "./store";
 import { getTest, judgeConversation, latestRuns, listTests, type TestCase, type TranscriptTurn } from "./tests";
-import { metered } from "./usage";
+import { limitReached, metered } from "./usage";
 
 export const QUESTION_KINDS = ["simple", "several", "follow-up", "reworded", "not covered"] as const;
 export type QuestionKind = (typeof QUESTION_KINDS)[number];
@@ -135,6 +135,8 @@ export async function startQualityCheck(agentId: string, authorId?: string, opti
   const latest = (await listQualityChecks(agentId, 1))[0];
   if (latest?.status === "running") return latest;
   if (!(await agentChunks(agentId)).length) return { error: "Add what your agent knows first (Teach it › What it knows): the check asks it questions about that." };
+  const limit = await limitReached(agent.workspaceId);
+  if (limit) return { error: limit };
   const id = newId("qc");
   await db().prepare("INSERT INTO quality_checks (id, agent_id, status, stage, author_id, created_at) VALUES (?, ?, 'running', 'Starting', ?, ?)").run(id, agentId, authorId ?? null, now());
   void inBackground(withTenant(agent.workspaceId, () => runCheck(id, agent, options.questions ?? QUESTIONS)));
