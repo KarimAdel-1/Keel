@@ -1,0 +1,43 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files: keys live here and never leave this machine
+.env*
+!.env.example
+
+# Everything the app writes under data/ (the database, uploads, the secret key, guardrail configs) stays local.
+/data/
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# the list of a private server's judges (npm run judge-accounts -- --names judges.txt) stays on the server
+/judges.txt
+
+# written by `next dev` itself (Next.js's notes for coding assistants); not part of Keel
+/CLAUDE.md
+/AGENTS.md

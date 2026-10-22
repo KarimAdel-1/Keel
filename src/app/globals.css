@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+/*
+ * Keel design tokens. A cool neutral canvas with white surfaces and hairline borders, one brand colour for the main
+ * action on each screen, and colour otherwise only for meaning (good, warning, error).
+ */
+:root {
+  color-scheme: light;
+
+  --bg: #f4f5f7;
+  --panel: #ffffff;
+  --panel-2: #f3f4f6;
+  --panel-3: #e9ebef;
+  --line: #e4e6ea;
+  --line-strong: #d0d4db;
+  --text: #0c0e13;
+  --muted: #5a606c;
+  --subtle: #8d939e;
+
+  --brand: #2348d8;
+  --brand-hover: #1c3bb8;
+  --brand-ink: #ffffff;
+  --brand-tint: #edf1fe;
+
+  /* The main action on a screen: near-black pills and buttons. */
+  --ink: #111214;
+  --ink-hover: #2a2c31;
+
+  --good: #087443;
+  --good-tint: #e9f8ef;
+  --warn: #b54708;
+  --warn-tint: #fff6e6;
+  --bad: #c0261b;
+  --bad-tint: #fdeeed;
+
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.05);
+  --shadow-raised: 0 1px 3px rgb(16 24 40 / 0.06), 0 16px 40px -16px rgb(16 24 40 / 0.22);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-panel-3: var(--panel-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-tint: var(--brand-tint);
+  --color-ink: var(--ink);
+  --color-ink-hover: var(--ink-hover);
+  --color-good: var(--good);
+  --color-good-tint: var(--good-tint);
+  --color-warn: var(--warn);
+  --color-warn-tint: var(--warn-tint);
+  --color-bad: var(--bad);
+  --color-bad-tint: var(--bad-tint);
+  --shadow-sm: var(--shadow-card);
+  --shadow-raised: var(--shadow-raised);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply bg-ink text-white shadow-sm hover:bg-ink-hover;
+  }
+  .btn-brand {
+    @apply bg-brand text-brand-ink shadow-sm hover:bg-brand-hover;
+  }
+  .btn-secondary {
+    @apply border border-line-strong bg-panel text-text shadow-sm hover:bg-panel-2;
+  }
+  .btn-ghost {
+    @apply text-muted hover:bg-panel-2 hover:text-text;
+  }
+  .btn-danger {
+    @apply bg-bad text-white shadow-sm hover:opacity-90;
+  }
+  .card {
+    @apply rounded-xl border border-line bg-panel shadow-sm;
+  }
+  .field {
+    @apply w-full rounded-lg border border-line-strong bg-panel px-3 py-2 text-sm shadow-sm outline-none transition placeholder:text-subtle focus:border-brand focus:ring-3 focus:ring-brand/15;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium;
+  }
+  .hint {
+    @apply mt-1 text-xs text-muted;
+  }
+  .link {
+    @apply text-brand underline-offset-2 hover:underline;
+  }
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-subtle;
+  }
+}
+
+/* The website's moving pictures (src/components/site/motion.tsx). */
+@keyframes site-dot {
+  0%, 80%, 100% { opacity: 0.3; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-2px); }
+}
+@keyframes site-ping {
+  from { opacity: 1; transform: scale(0.4); }
+  to { opacity: 0; transform: scale(1.4); }
+}
+@keyframes site-scan {
+  from { transform: translateY(0); }
+  to { transform: translateY(var(--scan-to, 200px)); }
+}
+.site-dot { animation: site-dot 1.1s ease-in-out infinite; }
+.site-ping { animation: site-ping 0.6s ease-out forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .site-dot, .site-ping { animation: none; }
+}
