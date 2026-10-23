@@ -14,6 +14,7 @@ import { admitsGap, confidenceOf, inPieces, pickModel, plainCitations, reply, sa
 import { visibleStream } from "@/lib/llm";
 import type { Agent, Passage } from "@/core/agents";
 import { DEFAULT_ACTION_CONFIG, promisesForm, type Action } from "@/core/actions";
+import { SELF_HARM_REPLY, speaksOfSelfHarm } from "@/core/safety";
 import { toolSpec } from "./actions";
 import { showPromisedForm, type TurnResult } from "./chat/agent-graph";
 import { compactResult } from "@/core/compact";
@@ -413,8 +414,25 @@ test("a reply that says a form is in the chat shows the form, even when the agen
   assert.equal((await showPromisedForm(called, [lead], context)).widgets.length, 0, "a form already shown isn't shown twice");
   assert.equal((await showPromisedForm(turn("Thanks, the team will be in touch."), [lead], context)).widgets.length, 0, "a reply that mentions no form changes nothing");
   assert.equal((await showPromisedForm(turn("Please fill out the form below."), [lead], { ...context, messaging: true })).widgets.length, 0, "nor in a messaging app, where forms are filled in the conversation");
-  const other = { ...lead, id: "act_book", name: "request_booking", title: "Booking request" } as Action;
-  assert.equal((await showPromisedForm(turn("Please fill out the form below."), [lead, other], context)).widgets.length, 0, "with two forms on offer, which one isn't guessed");
+  // Seen on a second site, with two forms: "Please fill out the return form below with your order number, email, and a
+  // brief description of what's wrong". It's the return form, not the contact form.
+  const returns = { ...lead, id: "act_return", kind: "form", name: "show_return_form", title: "Return request", config: { title: "Return request", fields: [{ key: "order_number", label: "Order number", type: "text", required: true }, { key: "email", label: "Email", type: "email", required: true }, { key: "reason", label: "What's wrong with it?", type: "long", required: true }], submitLabel: "Send request" } } as Action;
+  const said = "I'm sorry to hear that your star map arrived damaged. Please fill out the return form below with your order number, email, and a brief description of what's wrong.";
+  const meant = await showPromisedForm(turn(said), [lead, returns], context);
+  assert.equal(meant.widgets[0]?.type === "form" && meant.widgets[0].title, "Return request", "with two forms, the one the reply describes is shown");
+  assert.equal((await showPromisedForm(turn("Please fill out the form below."), [lead, returns], context)).widgets.length, 0, "and when the reply doesn't say which, none is guessed");
+});
+
+test("someone who speaks of harming themselves is answered with care, never with the agent's \"can't help with that\"", () => {
+  // Seen in testing: "i want to die" was blocked by the guardrails and answered "Sorry, I can't help with that here."
+  for (const said of ["i want to die", "I've been thinking about killing myself", "I just want to end it all", "I don't want to live anymore", "sometimes I hurt myself", "suicidal thoughts again"]) {
+    assert.ok(speaksOfSelfHarm(said), `"${said}" is heard`);
+  }
+  for (const said of ["this price is killing me", "I'd die for that blue glaze", "can I end my subscription?", "the mug arrived broken"]) {
+    assert.ok(!speaksOfSelfHarm(said), `"${said}" isn't`);
+  }
+  assert.match(SELF_HARM_REPLY, /emergency number/, "the reply says where help is, now");
+  assert.doesNotMatch(SELF_HARM_REPLY, /can't help/i);
 });
 
 test("a reworded \"don't know\" counts as one, and a loose match is never shown as confident", () => {

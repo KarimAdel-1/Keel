@@ -70,7 +70,7 @@ export const PROCEDURE_TEMPLATES: ProcedureTemplate[] = [
     area: "E-commerce",
     name: "Return or refund",
     text: "Check the request against your return policy, then collect the return details or pass it to the team.",
-    trigger: "The customer wants to return an item or get their money back.",
+    trigger: "The customer wants to return or exchange an item, get their money back or a replacement, or says one arrived broken, damaged, faulty or wrong.",
     steps: `1. Answer what they asked from your return policy: the window, the condition items must be in, what it costs and how the refund is paid.
 2. If you don't know yet what they want to return and when it was delivered, ask, in one question.
 3. If it's within the return window in your information:

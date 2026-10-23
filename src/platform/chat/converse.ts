@@ -7,6 +7,7 @@
 // it (it then arrives whole).
 
 import type { Agent, ChatLayout } from "@/core/agents";
+import { SELF_HARM_REPLY, speaksOfSelfHarm } from "@/core/safety";
 import { db } from "@/lib/db";
 import type { Picture } from "@/lib/llm";
 import { json } from "@/lib/rows";
@@ -122,9 +123,11 @@ async function turn(input: TurnInput, meter: Meter): Promise<TurnResult> {
   if (railsOn && rails.input) {
     const check = await guard(agent, "input", message);
     if (check.blocked) {
-      await addMessage(conversationId, { role: "assistant", content: rails.blockedMessage, meta: { blockedBy: check.rail ?? "self check input" } });
-      input.onText?.(rails.blockedMessage);
-      return { conversationId, reply: quiet(agent, rails.blockedMessage), status: "blocked", tokens: meter.inputTokens + meter.outputTokens };
+      // Someone who speaks of harming themselves is answered with care and pointed to help, not told "I can't help".
+      const said = speaksOfSelfHarm(message) ? SELF_HARM_REPLY : rails.blockedMessage;
+      await addMessage(conversationId, { role: "assistant", content: said, meta: { blockedBy: check.rail ?? "self check input" } });
+      input.onText?.(said);
+      return { conversationId, reply: quiet(agent, said), status: "blocked", tokens: meter.inputTokens + meter.outputTokens };
     }
   }
   // With the output rail on, the reply is checked whole before the customer sees any of it.

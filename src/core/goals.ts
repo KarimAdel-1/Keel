@@ -17,10 +17,14 @@ export interface Goal {
    * The actions it needs: `ref` is the name its procedures call (@ref), `name` the action's own when it differs (two
    * goals each with a form), with their settings for this goal.
    */
-  actions: { kind: ActionKind; ref: string; name?: string; title?: string; config?: Partial<ActionConfigs[ActionKind]> }[];
+  actions: { kind: ActionKind; ref: string; name?: string; title?: string; description?: string; config?: Partial<ActionConfigs[ActionKind]> }[];
   /** The procedure templates it adds (src/core/procedures.ts), by name. */
   procedures: string[];
 }
+
+/** When the agent shows each goal's form: said plainly, so a customer's own words ("it arrived broken") lead to it. */
+export const RETURN_FORM_WHEN = "Use when the customer wants to return or exchange an item, get a refund or a replacement, or says one arrived broken, damaged, faulty or wrong.";
+export const BOOKING_FORM_WHEN = "Use when the customer wants to book a table, a room, a class or an appointment.";
 
 export const GOALS: Record<GoalKey, Goal> = {
   person: {
@@ -47,6 +51,7 @@ export const GOALS: Record<GoalKey, Goal> = {
         ref: "show_request_form",
         name: "show_booking_form",
         title: "Booking request",
+        description: BOOKING_FORM_WHEN,
         config: {
           title: "Booking request",
           fields: [
@@ -70,6 +75,7 @@ export const GOALS: Record<GoalKey, Goal> = {
         ref: "show_request_form",
         name: "show_return_form",
         title: "Return request",
+        description: RETURN_FORM_WHEN,
         config: {
           title: "Return request",
           fields: [

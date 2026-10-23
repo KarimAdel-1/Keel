@@ -12,7 +12,7 @@ import { chatWithTools, type AgentMessage } from "@/lib/llm";
 import type { ModelKey } from "@/lib/models";
 import { compactResult } from "@/core/compact";
 import type { ToolSpec } from "@/core/tools";
-import { runAction, type ActionContext } from "../actions";
+import { formFields, runAction, type ActionContext } from "../actions";
 
 export const CALLS_PER_STEP = 4;
 export const CALLS_PER_REPLY = 12;
@@ -130,16 +130,35 @@ const FORM_KINDS = new Set<string>(["lead", "data", "form"]);
 
 /**
  * A reply that tells the visitor a form is in the chat ("fill in the form below") when the agent didn't show one: the
- * visitor would look for a form that isn't there. With one form on offer, it's shown; with several, which one isn't
- * known, so nothing is. In a messaging app, forms are filled in the conversation, so nothing changes there.
+ * visitor would look for a form that isn't there. With one form on offer, it's shown; with several, the one the reply
+ * describes (formMeant), and none when that isn't clear. In a messaging app, forms are filled in the conversation, so
+ * nothing changes there.
  */
 export async function showPromisedForm(result: TurnResult, actions: Action[], context: ActionContext): Promise<TurnResult> {
   if (context.messaging || result.handedOver || !promisesForm(result.text)) return result;
   const kindOf = (name: string) => actions.find((a) => a.name === name)?.kind ?? "";
   if (result.calls.some((c) => FORM_KINDS.has(kindOf(c.name)))) return result;
   const forms = actions.filter((a) => FORM_KINDS.has(a.kind));
-  if (forms.length !== 1) return result;
-  const outcome = await runAction(forms[0], "{}", context);
-  const record: ActionCallRecord = { name: forms[0].name, arguments: "{}", result: JSON.stringify(outcome.result).slice(0, 2000) };
+  const form = forms.length === 1 ? forms[0] : formMeant(result.text, forms);
+  if (!form) return result;
+  const outcome = await runAction(form, "{}", context);
+  const record: ActionCallRecord = { name: form.name, arguments: "{}", result: JSON.stringify(outcome.result).slice(0, 2000) };
   return { ...result, calls: [...result.calls, record], widgets: outcome.widget ? [...result.widgets, outcome.widget] : result.widgets };
+}
+
+/** Words every form shares, which tell forms apart from nothing. */
+const FORM_WORDS = new Set(["form", "show", "with", "what's", "your", "the", "and", "for", "you", "this", "that", "request", "details"]);
+const wordsIn = (text: string) => new Set((text.toLowerCase().match(/\p{L}[\p{L}']{2,}/gu) ?? []).filter((w) => !FORM_WORDS.has(w)));
+
+/**
+ * Of several forms, the one a reply describes: the reply names more of its own words (its title, its name, its fields'
+ * labels, leaving out those another form has too) than of any other's. "The return form below, with your order number
+ * and what's wrong" is the return form, not the contact form. None when no form stands out.
+ */
+export function formMeant(text: string, forms: Action[]): Action | undefined {
+  const said = wordsIn(text);
+  const own = forms.map((f) => wordsIn(`${f.title} ${f.name.replace(/_/g, " ")} ${formFields(f).map((x) => x.label).join(" ")}`));
+  const scores = own.map((words, i) => [...words].filter((w) => said.has(w) && !own.some((other, j) => j !== i && other.has(w))).length);
+  const best = Math.max(0, ...scores);
+  return best > 0 && scores.filter((s) => s === best).length === 1 ? forms[scores.indexOf(best)] : undefined;
 }

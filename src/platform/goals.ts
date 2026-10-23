@@ -56,7 +56,7 @@ export async function setGoal(agentId: string, key: GoalKey, on: boolean): Promi
   const names = new Map<string, string>();
   for (const want of goal.actions) {
     let action = actionFor(await listActions(agentId), want);
-    if (!action) action = await createAction(agentId, want.kind, { name: want.name ?? want.ref, ...(want.title ? { title: want.title } : {}), ...(want.config ? { config: want.config } : {}) });
+    if (!action) action = await createAction(agentId, want.kind, { name: want.name ?? want.ref, ...(want.title ? { title: want.title } : {}), ...(want.description ? { description: want.description } : {}), ...(want.config ? { config: want.config } : {}) });
     else if (!action.enabled) action = (await updateAction(action.id, { enabled: true })) ?? action;
     names.set(want.ref, action.name);
   }

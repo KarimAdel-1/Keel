@@ -479,6 +479,15 @@ const MIGRATIONS: string[] = [
   // team, the hackathon's judges) never mix theirs. Keel's own messages to everyone (thread '') stay shared.
   `ALTER TABLE backstage ADD COLUMN thread TEXT NOT NULL DEFAULT '';
    CREATE INDEX backstage_thread ON backstage(agent_id, thread, id);`,
+  // 4 (23 Oct): the return and booking forms said only "a request this form is for", and the return procedure only
+  // "return an item or get their money back", so "it arrived broken" led nowhere. The new wording (src/core/goals.ts,
+  // src/core/procedures.ts) replaces the old where the builder never changed it.
+  `UPDATE actions SET description = $$Use when the customer wants to return or exchange an item, get a refund or a replacement, or says one arrived broken, damaged, faulty or wrong.$$
+     WHERE kind = 'form' AND name = 'show_return_form' AND description = $$Use when the customer wants to make a request this form is for.$$;
+   UPDATE actions SET description = $$Use when the customer wants to book a table, a room, a class or an appointment.$$
+     WHERE kind = 'form' AND name = 'show_booking_form' AND description = $$Use when the customer wants to make a request this form is for.$$;
+   UPDATE procedures SET trigger = $$The customer wants to return or exchange an item, get their money back or a replacement, or says one arrived broken, damaged, faulty or wrong.$$
+     WHERE name = 'Return or refund' AND trigger = $$The customer wants to return an item or get their money back.$$;`,
 ];
 
 type Params = unknown[];
