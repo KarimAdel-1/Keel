@@ -48,7 +48,7 @@ export const FEATURES: FeaturePage[] = [
       { title: "Ready for your kind of business", text: "A shop starts with returns and a way to reach a person; a restaurant with booking requests. Change them any time." },
       { title: "A to-do list on Home", text: "What leaves customers stuck comes first, such as no way to reach a person. Many items fix themselves in one click." },
       { title: "Nothing is lost", text: "Turning a goal off switches off only what no other goal needs, and deletes nothing you wrote." },
-      { title: "Plain names", text: "Home, Try it, Teach it, Check it, Put it live, Conversations and the Helpdesk inbox. Everything else waits under More tools." },
+      { title: "Plain names", text: "Home, Try it, Teach it, Check it, Put it live, Conversations and the Helpdesk inbox. Everything else is listed under More tools, just below." },
       { title: "Told when it matters", text: "When a customer needs a person, you hear about it in Keel, in your browser and by email." },
     ],
     steps: [

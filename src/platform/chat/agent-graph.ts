@@ -6,7 +6,7 @@
 // bring in the team (the actions that hand over or open a ticket), or answer.
 
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
-import type { Action } from "@/core/actions";
+import { promisesForm, type Action } from "@/core/actions";
 import type { ChatWidget } from "@/core/widgets";
 import { chatWithTools, type AgentMessage } from "@/lib/llm";
 import type { ModelKey } from "@/lib/models";
@@ -122,5 +122,24 @@ export async function runAgentTurn(input: {
     .addConditionalEdges("act", (state) => (state.handedOver || state.steps >= STEPS ? END : "think"), ["think", END])
     .compile();
 
-  return graph.invoke({ messages: input.messages }, { recursionLimit: STEPS * 2 + 4, signal: input.signal });
+  const result = await graph.invoke({ messages: input.messages }, { recursionLimit: STEPS * 2 + 4, signal: input.signal });
+  return showPromisedForm(result, input.actions, input.context);
+}
+
+const FORM_KINDS = new Set<string>(["lead", "data", "form"]);
+
+/**
+ * A reply that tells the visitor a form is in the chat ("fill in the form below") when the agent didn't show one: the
+ * visitor would look for a form that isn't there. With one form on offer, it's shown; with several, which one isn't
+ * known, so nothing is. In a messaging app, forms are filled in the conversation, so nothing changes there.
+ */
+export async function showPromisedForm(result: TurnResult, actions: Action[], context: ActionContext): Promise<TurnResult> {
+  if (context.messaging || result.handedOver || !promisesForm(result.text)) return result;
+  const kindOf = (name: string) => actions.find((a) => a.name === name)?.kind ?? "";
+  if (result.calls.some((c) => FORM_KINDS.has(kindOf(c.name)))) return result;
+  const forms = actions.filter((a) => FORM_KINDS.has(a.kind));
+  if (forms.length !== 1) return result;
+  const outcome = await runAction(forms[0], "{}", context);
+  const record: ActionCallRecord = { name: forms[0].name, arguments: "{}", result: JSON.stringify(outcome.result).slice(0, 2000) };
+  return { ...result, calls: [...result.calls, record], widgets: outcome.widget ? [...result.widgets, outcome.widget] : result.widgets };
 }

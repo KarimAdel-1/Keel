@@ -12,7 +12,10 @@ import { renderWidget } from "@/core/widgets";
 import { demoOrder, ownDemoOrder } from "./demo-orders";
 import { admitsGap, confidenceOf, inPieces, pickModel, plainCitations, reply, saysFallback } from "./chat/answer";
 import { visibleStream } from "@/lib/llm";
-import type { Passage } from "@/core/agents";
+import type { Agent, Passage } from "@/core/agents";
+import { DEFAULT_ACTION_CONFIG, promisesForm, type Action } from "@/core/actions";
+import { toolSpec } from "./actions";
+import { showPromisedForm, type TurnResult } from "./chat/agent-graph";
 import { compactResult } from "@/core/compact";
 import { compactHistory, compressPassages, searchQuery } from "@/core/context";
 import { isClear } from "./tests";
@@ -385,6 +388,33 @@ test("action results reach the model compact, with every value kept", async () =
   const long = compactResult(JSON.stringify({ rows: Array.from({ length: 50 }, (_, i) => ({ id: i, ok: true })) }));
   assert.match(long, /… 30 more/, "a long list says how much was left out");
   assert.equal(compactResult("plain text"), "plain text");
+});
+
+test("a reply that says a form is in the chat shows the form, even when the agent forgot to call it", async () => {
+  // Seen on a live site: "I'll now show you a quick form… Please fill out the form below", and no form.
+  for (const said of ["I'll now show you a quick form where you can leave your details.", "Please fill out the form below when you're ready.", "The form is now displayed on your screen.", "Here's a short form for your details."]) {
+    assert.ok(promisesForm(said), `"${said}" says a form is there`);
+  }
+  for (const said of ["You can also use the contact form on our website.", "We'll send you a form by email after the call.", "What kind of website do you have in mind?"]) {
+    assert.ok(!promisesForm(said), `"${said}" doesn't`);
+  }
+
+  const now = new Date().toISOString();
+  const lead = { id: "act_lead", agentId: "agt_x", kind: "lead", name: "collect_lead", title: "Collect a lead", description: "When someone wants a quote.", config: { ...DEFAULT_ACTION_CONFIG.lead, fields: ["name", "email", "phone"] }, enabled: true, proceduresOnly: false, createdAt: now, updatedAt: now } as Action;
+  assert.match(toolSpec(lead).description, /asking for: Name, Email, Phone \(optional\)/, "the agent is told what the form asks for, so it can't describe fields it doesn't have");
+  const turn = (text: string, calls: TurnResult["calls"] = []): TurnResult => ({ messages: [], calls, widgets: [], pending: [], text, handedOver: false, steps: 1, failures: 0, costUsd: 0 });
+  const context = { agent: { id: "agt_x" } as Agent };
+
+  const shown = await showPromisedForm(turn("Please fill out the form below when you're ready."), [lead], context);
+  assert.equal(shown.widgets[0]?.type, "form", "the form the reply promised is shown");
+  assert.deepEqual(shown.calls.map((c) => c.name), ["collect_lead"], "and recorded as the agent's action");
+
+  const called = turn("Please fill out the form below.", [{ name: "collect_lead", arguments: "{}", result: "{}" }]);
+  assert.equal((await showPromisedForm(called, [lead], context)).widgets.length, 0, "a form already shown isn't shown twice");
+  assert.equal((await showPromisedForm(turn("Thanks, the team will be in touch."), [lead], context)).widgets.length, 0, "a reply that mentions no form changes nothing");
+  assert.equal((await showPromisedForm(turn("Please fill out the form below."), [lead], { ...context, messaging: true })).widgets.length, 0, "nor in a messaging app, where forms are filled in the conversation");
+  const other = { ...lead, id: "act_book", name: "request_booking", title: "Booking request" } as Action;
+  assert.equal((await showPromisedForm(turn("Please fill out the form below."), [lead, other], context)).widgets.length, 0, "with two forms on offer, which one isn't guessed");
 });
 
 test("a reworded \"don't know\" counts as one, and a loose match is never shown as confident", () => {

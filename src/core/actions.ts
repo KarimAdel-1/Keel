@@ -134,6 +134,22 @@ export const LEAD_FIELDS: Record<"name" | "email" | "phone" | "company", FieldSp
   company: { key: "company", label: "Company", type: "text", required: false },
 };
 
+/** A form's fields as the agent describes them to the visitor: "Name, Email, Phone (optional)". */
+export const fieldList = (fields: FieldSpec[]) => fields.map((f) => `${f.label}${f.required ? "" : " (optional)"}`).join(", ");
+
+/**
+ * Whether a reply tells the visitor a form is in the chat: "fill in the form below", "I'll show you a quick form", "the
+ * form is now on your screen". A form on a website ("the contact form on our site") doesn't count.
+ */
+export function promisesForm(text: string): boolean {
+  return [
+    /\bform (?:below|above)\b/i,
+    /\bshow(?:ing)? you (?:a|the|our) (?:\w+ ){0,2}form\b/i,
+    /\bform (?:is|has been|will be) (?:now )?(?:shown|displayed|showing|on (?:your |the )?screen|(?:right )?here)\b/i,
+    /\bhere(?:'s| is) (?:a|the|our) (?:\w+ ){0,2}form\b/i,
+  ].some((pattern) => pattern.test(text));
+}
+
 /** A tool name as the model needs it: lowercase letters, digits and underscores. */
 export const toolName = (text: string) =>
   text

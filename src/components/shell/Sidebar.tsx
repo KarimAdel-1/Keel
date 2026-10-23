@@ -66,7 +66,7 @@ const AGENT_NAV: NavItem[] = [
   { label: "Helpdesk inbox", icon: LifeBuoy, href: "/app/helpdesk", external: true },
 ];
 
-/** Everything else, a click away under "More tools": it opens by itself on one of its pages. */
+/** Everything else, under the "More tools" heading, always in view. */
 const MORE_NAV: NavItem[] = [
   {
     label: "What it can do",
@@ -217,27 +217,16 @@ export function Sidebar({
   );
 }
 
-/** "More tools": the rest of the agent's pages, folded away until wanted (or while one of them is open). */
+/** "More tools": the rest of the agent's pages, always in view under their own heading. */
 function MoreTools({ base, pathname, mini }: { base: string; pathname: string; mini: boolean }) {
-  const within = MORE_NAV.some((item) => (item.children ?? [{ path: item.path ?? "" }]).some((c) => pathname.startsWith(`${base}${c.path}`)));
-  const [expanded, setExpanded] = useState(false);
-  const show = expanded || within || mini;
   return (
     <div className="mt-2 border-t border-line pt-2">
-      {!mini && (
-        <button type="button" onClick={() => setExpanded(!show)} aria-expanded={show} className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-[13px] text-muted transition hover:bg-panel-2 hover:text-text">
-          <MoreHorizontal className="size-[18px]" />
-          <span className="flex-1 text-left">More tools</span>
-          {show ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
-        </button>
-      )}
-      {show && (
-        <ul className="space-y-0.5">
-          {MORE_NAV.map((item) => (
-            <NavRow key={item.label} item={item} base={base} pathname={pathname} mini={mini} />
-          ))}
-        </ul>
-      )}
+      {!mini && <p className="eyebrow px-2.5 pb-1 pt-2">More tools</p>}
+      <ul className="space-y-0.5">
+        {MORE_NAV.map((item) => (
+          <NavRow key={item.label} item={item} base={base} pathname={pathname} mini={mini} />
+        ))}
+      </ul>
     </div>
   );
 }

@@ -3,7 +3,7 @@
 // drawn in the chat. In a test run nothing real happens: each action returns the response the test defines (or a
 // plain success), so a test can never book, refund or email anything.
 
-import { ACTION_INFO, DEFAULT_ACTION_CONFIG, LEAD_FIELDS, toolName, type Action, type ActionConfigs, type ActionKind } from "@/core/actions";
+import { ACTION_INFO, DEFAULT_ACTION_CONFIG, LEAD_FIELDS, fieldList, toolName, type Action, type ActionConfigs, type ActionKind } from "@/core/actions";
 import type { Agent } from "@/core/agents";
 import type { ToolSpec } from "@/core/tools";
 import { renderWidget, type ChatWidget, type FieldSpec } from "@/core/widgets";
@@ -171,7 +171,8 @@ export function toolSpec(action: Action, options: { conversational?: boolean } =
     );
     suffix = " The customer is in a messaging app and can't see forms: ask them for these details in the conversation, then call it with their own answers (never invent one). It saves them for the team.";
   } else if (kind === "lead" || kind === "data" || kind === "form") {
-    suffix = " Shows a form in the chat for the visitor to fill in; after calling it, tell them briefly and wait.";
+    // The agent is told what the form asks for, so it never describes fields the form doesn't have.
+    suffix = ` Shows a form in the chat for the visitor to fill in, asking for: ${fieldList(formFields(action))}. Call it in the same reply that mentions the form (never say a form is there without calling this); after calling it, tell them briefly what it asks for and wait.`;
   } else if (kind === "button") {
     suffix = " Shows a button in the chat that opens a page.";
   }
@@ -318,7 +319,7 @@ export async function runAction(action: Action, argsText: string, ctx: ActionCon
     case "lead":
     case "data":
     case "form": {
-      if (!ctx.messaging) return { result: { shown: shown?.type ?? "nothing", note: "It's on the visitor's screen now." }, ...(shown ? { widget: shown } : {}) };
+      if (!ctx.messaging) return { result: { shown: shown?.type ?? "nothing", note: `It's on the visitor's screen now, asking for: ${fieldList(formFields(action))}.` }, ...(shown ? { widget: shown } : {}) };
       // In a messaging app, the customer's answers came in the conversation: saved as if the form was filled in.
       const { addSubmission, checkAnswers } = await import("./submissions");
       const checked = checkAnswers(formFields(action), args);
