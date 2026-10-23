@@ -7,9 +7,9 @@ import { PageBar } from "@/components/shell/PageBar";
 import { Pill, timeAgo } from "@/components/ui";
 import { membersOf } from "@/platform/accounts";
 import { getContact } from "@/platform/contacts";
-import { STATUS_INFO, TICKET_STATUSES, getTicket, listTickets, ticketCounts, ticketEvents, type InboxView, type TicketStatus } from "@/platform/helpdesk";
+import { STATUS_INFO, TICKET_STATUSES, getTicket, listTickets, openTicketsByAgent, ticketCounts, ticketEvents, type InboxView, type TicketStatus } from "@/platform/helpdesk";
 import { requireUser } from "@/platform/session";
-import { conversationMessages, getAgent } from "@/platform/store";
+import { conversationMessages, getAgent, listAgents } from "@/platform/store";
 import { toTranscript } from "@/platform/transcript";
 
 export const metadata: Metadata = { title: "Helpdesk inbox" };
@@ -24,21 +24,29 @@ const TONE: Record<TicketStatus, "neutral" | "good" | "warn" | "bad" | "brand"> 
 
 /**
  * The Helpdesk inbox: tickets from every agent in the workspace, where the team takes over from an agent. Views by
- * owner; a ticket shows the whole chat, and a reply lands in the customer's chat window.
+ * owner, and (with several agents) by agent: opened from an agent's menu, it shows that agent's tickets first. A ticket
+ * shows the whole chat, and a reply lands in the customer's chat window.
  */
 export default async function HelpdeskPage({ searchParams }: PageProps<"/app/helpdesk">) {
   const { user, workspace } = await requireUser();
   const query = await searchParams;
-  const counts = await ticketCounts(workspace.id, user.id);
+  const agents = await listAgents(workspace.id);
+  const onlyAgent = agents.find((a) => a.id === query.agent)?.id;
+  const counts = await ticketCounts(workspace.id, user.id, onlyAgent);
+  const byAgent = agents.length > 1 ? await openTicketsByAgent(workspace.id) : {};
   const view = VIEWS.find((v) => v.key === query.view)?.key ?? (counts.mine ? "mine" : counts.unassigned ? "unassigned" : "all");
-  const tickets = await listTickets(workspace.id, view, user.id);
+  const tickets = await listTickets(workspace.id, view, user.id, onlyAgent);
   const wanted = typeof query.t === "string" ? await getTicket(query.t) : undefined;
   const wantedAgent = wanted ? await getAgent(wanted.agentId) : undefined;
   const selected = wanted && wantedAgent?.workspaceId === workspace.id ? { ...wanted, agentName: wantedAgent.name } : tickets[0];
   const agent = selected ? await getAgent(selected.agentId) : undefined;
   const names = Object.fromEntries((await membersOf(workspace.id)).map((m) => [m.id, m.name]));
   const contact = selected?.contactId ? await getContact(selected.contactId) : undefined;
-  const href = (next: { view?: InboxView; t?: string }) => `/app/helpdesk?${new URLSearchParams({ view: next.view ?? view, ...(next.t ? { t: next.t } : {}) })}`;
+  const href = (next: { view?: InboxView; t?: string; agent?: string | null }) => {
+    const agentParam = next.agent === undefined ? onlyAgent : next.agent;
+    return `/app/helpdesk?${new URLSearchParams({ view: next.view ?? view, ...(agentParam ? { agent: agentParam } : {}), ...(next.t ? { t: next.t } : {}) })}`;
+  };
+  const allOpen = Object.values(byAgent).reduce((sum, n) => sum + n, 0);
 
   return (
     <>
@@ -51,6 +59,22 @@ export default async function HelpdeskPage({ searchParams }: PageProps<"/app/hel
               <span className="text-xs tabular-nums text-subtle">{counts[v.key]}</span>
             </Link>
           ))}
+          {agents.length > 1 && (
+            <>
+              <p className="eyebrow px-3 pb-1 pt-5">Agents</p>
+              {[{ id: null, name: "All agents", open: allOpen }, ...agents.map((a) => ({ id: a.id, name: a.name, open: byAgent[a.id] ?? 0 }))].map((a) => (
+                <Link
+                  key={a.id ?? "all"}
+                  href={href({ agent: a.id })}
+                  aria-current={(a.id ?? undefined) === onlyAgent ? "page" : undefined}
+                  className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm ${(a.id ?? undefined) === onlyAgent ? "bg-panel-2 font-medium text-ink" : "text-muted hover:bg-panel-2/60 hover:text-ink"}`}
+                >
+                  <span className="truncate">{a.name}</span>
+                  <span className="text-xs tabular-nums text-subtle" title="Open tickets">{a.open}</span>
+                </Link>
+              ))}
+            </>
+          )}
         </nav>
         <ul className="min-h-0 divide-y divide-line overflow-y-auto border-b border-line lg:border-b-0 lg:border-r">
           {tickets.map((t) => (

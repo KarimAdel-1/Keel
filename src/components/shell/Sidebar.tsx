@@ -17,7 +17,8 @@ export interface SidebarAgent {
   steps: { title: string; done: boolean; href: string }[];
 }
 
-type NavItem = { label: string; icon: typeof Play; path?: string; href?: string; children?: { label: string; path: string }[]; external?: boolean };
+/** `forAgent`: a workspace page (`href`) opened on the agent being worked on, as `?agent=` */
+type NavItem = { label: string; icon: typeof Play; path?: string; href?: string; children?: { label: string; path: string }[]; external?: boolean; forAgent?: boolean };
 
 /** What pages were called before they had plain names: search still finds them by those. */
 const OLD_NAMES: Record<string, string> = {
@@ -63,7 +64,7 @@ const AGENT_NAV: NavItem[] = [
     ],
   },
   { label: "Conversations", icon: Inbox, path: "/activity" },
-  { label: "Helpdesk inbox", icon: LifeBuoy, href: "/app/helpdesk", external: true },
+  { label: "Helpdesk inbox", icon: LifeBuoy, href: "/app/helpdesk", external: true, forAgent: true },
 ];
 
 /** Everything else, under the "More tools" heading, always in view. */
@@ -254,7 +255,7 @@ function NavRow({ item, base, pathname, mini }: { item: NavItem; base: string; p
   const show = expanded || childActive;
 
   if (!item.children) {
-    const href = item.href ?? `${base}${item.path}`;
+    const href = item.href ? (item.forAgent ? `${item.href}?agent=${base.split("/").at(-1)}` : item.href) : `${base}${item.path}`;
     const active = item.href ? pathname.startsWith(item.href) : item.path ? pathname.startsWith(href) : pathname === href;
     return (
       <li>

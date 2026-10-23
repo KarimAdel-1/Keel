@@ -5,7 +5,7 @@ import { now } from "@/lib/rows";
 import { currentTenant, setTestTenant, withTenant } from "@/lib/tenant";
 import { offline } from "@/testing/live";
 import { signUp } from "./accounts";
-import { getTicket, openTicket } from "./helpdesk";
+import { getTicket, listTickets, openTicket, openTicketsByAgent, setStatus, ticketCounts } from "./helpdesk";
 import { startImprovement } from "./improve";
 import { startQualityCheck } from "./quality";
 import { startScan } from "./security";
@@ -98,6 +98,22 @@ test("a private server (KEEL_PRIVATE): an agent's chat answers only people signe
     else process.env.KEEL_PRIVATE = before;
   }
   assert.equal((await visit(undefined))?.id, agent.id, "on an ordinary server the chat is public, as a business's website needs");
+});
+
+test("the helpdesk inbox: every agent's tickets in one place, narrowed to one agent when asked", async () => {
+  const { user, workspace } = await signUp({ email: `desk${Math.random().toString(36).slice(2)}@example.com`, name: "Desk", password: "long enough" });
+  await withTenant(workspace.id, async () => {
+    const shop = await createAgent(workspace.id, "Shop");
+    const studio = await createAgent(workspace.id, "Studio");
+    for (const [agent, subject] of [[shop, "Broken mug"], [shop, "Late order"], [studio, "Workshop date"]] as const) await openTicket({ agentId: agent.id, subject, summary: subject });
+    const solved = await openTicket({ agentId: studio.id, subject: "Old question", summary: "Answered." });
+    await setStatus(solved.id, "solved");
+
+    assert.deepEqual((await listTickets(workspace.id, "all", user.id)).map((t) => t.subject).sort(), ["Broken mug", "Late order", "Workshop date"], "one inbox holds every agent's open tickets");
+    assert.deepEqual((await listTickets(workspace.id, "all", user.id, shop.id)).map((t) => t.subject).sort(), ["Broken mug", "Late order"], "narrowed to one agent, only its tickets");
+    assert.equal((await ticketCounts(workspace.id, user.id, studio.id)).solved, 1, "the counts follow the agent chosen");
+    assert.deepEqual(await openTicketsByAgent(workspace.id), { [shop.id]: 2, [studio.id]: 1 }, "each agent's open tickets, for the agent list");
+  });
 });
 
 type Business = Awaited<ReturnType<typeof business>>;

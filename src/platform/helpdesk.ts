@@ -133,9 +133,18 @@ export async function listTickets(workspaceId: string, view: InboxView, userId: 
     .all<Row & { agent_name: string }>(...args)).map((r) => ({ ...toTicket(r), agentName: r.agent_name }));
 }
 
-export async function ticketCounts(workspaceId: string, userId: string): Promise<Record<InboxView, number>> {
-  const count = async (view: InboxView) => (await listTickets(workspaceId, view, userId)).length;
+/** How many tickets each view holds, for one agent or (with none given) every agent in the workspace. */
+export async function ticketCounts(workspaceId: string, userId: string, agentId?: string): Promise<Record<InboxView, number>> {
+  const count = async (view: InboxView) => (await listTickets(workspaceId, view, userId, agentId)).length;
   return { mine: await count("mine"), unassigned: await count("unassigned"), all: await count("all"), solved: await count("solved") };
+}
+
+/** Open tickets (not solved or closed) for each of the workspace's agents that has any, by agent id. */
+export async function openTicketsByAgent(workspaceId: string): Promise<Record<string, number>> {
+  const rows = await db()
+    .prepare("SELECT t.agent_id, COUNT(*) AS n FROM tickets t JOIN agents a ON a.id = t.agent_id WHERE a.workspace_id = ? AND t.status NOT IN ('solved', 'closed') GROUP BY t.agent_id")
+    .all<{ agent_id: string; n: number | string }>(workspaceId);
+  return Object.fromEntries(rows.map((r) => [r.agent_id, Number(r.n)]));
 }
 
 async function touch(id: string, change: Partial<Record<"status" | "assignee_id" | "priority", string | null>>): Promise<void> {
