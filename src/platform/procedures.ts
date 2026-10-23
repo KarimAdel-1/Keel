@@ -98,7 +98,9 @@ export async function pickProcedure(agentId: string, question: string, history: 
         role: "system",
         content: [
           "You route a customer's message to the playbook that applies. Answer with the playbook's name exactly as written, or \"none\" when no trigger clearly applies.",
-          active ? `The conversation is already following "${active.name}"; keep it unless the customer has clearly moved to something another playbook covers.` : "",
+          active
+            ? `The conversation is already following "${active.name}"; keep it unless the customer has clearly moved to something another playbook covers. A customer answering what the assistant just asked (an order number, what they need, a date) hasn't moved: keep "${active.name}".`
+            : "",
           DATA_RULE,
           reference("playbooks", list),
           reference("conversation", history.slice(-2000)),

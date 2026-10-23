@@ -33,10 +33,8 @@ export const PROCEDURE_TEMPLATES: ProcedureTemplate[] = [
     name: "Hand over to a person",
     text: "Bring in someone from the team when the customer asks for a person or is upset, and open a ticket when no one is available.",
     trigger: "The customer asks to speak to a person, or is frustrated and the answer isn't helping.",
-    steps: `1. Apologise briefly and say you'll bring in someone from the team.
-2. If the customer hasn't said what they need yet:
-   1. Ask what they need help with, in one question.
-3. Use @hand_over_to_person with a one-sentence reason.`,
+    steps: `1. Apologise briefly and say you're bringing in someone from the team.
+2. Use @hand_over_to_person straight away, with a one-sentence reason (what they need, if they've said). Don't ask questions first: the team will.`,
     needs: [{ name: "hand_over_to_person", kind: "handoff" }],
   },
   {

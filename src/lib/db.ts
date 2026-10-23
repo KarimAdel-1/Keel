@@ -488,6 +488,15 @@ const MIGRATIONS: string[] = [
      WHERE kind = 'form' AND name = 'show_booking_form' AND description = $$Use when the customer wants to make a request this form is for.$$;
    UPDATE procedures SET trigger = $$The customer wants to return or exchange an item, get their money back or a replacement, or says one arrived broken, damaged, faulty or wrong.$$
      WHERE name = 'Return or refund' AND trigger = $$The customer wants to return an item or get their money back.$$;`,
+  // 5 (23 Oct): "Hand over to a person" asked what the customer needed before handing over, and their answer often
+  // matched another procedure, so the person never came. Now it hands over straight away (src/core/procedures.ts),
+  // where the builder never changed the steps.
+  `UPDATE procedures SET steps = $$1. Apologise briefly and say you're bringing in someone from the team.
+2. Use @hand_over_to_person straight away, with a one-sentence reason (what they need, if they've said). Don't ask questions first: the team will.$$
+     WHERE name = 'Hand over to a person' AND steps = $$1. Apologise briefly and say you'll bring in someone from the team.
+2. If the customer hasn't said what they need yet:
+   1. Ask what they need help with, in one question.
+3. Use @hand_over_to_person with a one-sentence reason.$$;`,
 ];
 
 type Params = unknown[];

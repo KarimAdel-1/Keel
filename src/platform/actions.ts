@@ -176,7 +176,18 @@ export function toolSpec(action: Action, options: { conversational?: boolean } =
   } else if (kind === "button") {
     suffix = " Shows a button in the chat that opens a page.";
   }
-  return { name: action.name, description: `${action.description}${suffix}`.slice(0, 1000), parameters };
+  return { name: action.name, description: `${whenToUse(action)}${suffix}`.slice(0, 1000), parameters };
+}
+
+/**
+ * When the agent should use an action. A form or button still carrying its kind's default sentence ("a request this
+ * form is for") says which one it is, by its own title or label, so the agent can tell when it fits.
+ */
+function whenToUse(action: Action): string {
+  if (action.description !== ACTION_INFO[action.kind].description) return action.description;
+  if (action.kind === "form") return `Use when the customer needs the "${action.title}" form.`;
+  if (action.kind === "button") return `Use when the customer is ready for the next step the "${(action.config as ActionConfigs["button"]).label || action.title}" button opens.`;
+  return action.description;
 }
 
 /**

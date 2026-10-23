@@ -13,10 +13,10 @@ import { demoOrder, ownDemoOrder } from "./demo-orders";
 import { admitsGap, confidenceOf, inPieces, pickModel, plainCitations, reply, saysFallback } from "./chat/answer";
 import { visibleStream } from "@/lib/llm";
 import type { Agent, Passage } from "@/core/agents";
-import { DEFAULT_ACTION_CONFIG, promisesForm, type Action } from "@/core/actions";
+import { DEFAULT_ACTION_CONFIG, claimsIn, promisesForm, type Action } from "@/core/actions";
 import { SELF_HARM_REPLY, speaksOfSelfHarm } from "@/core/safety";
 import { toolSpec } from "./actions";
-import { showPromisedForm, type TurnResult } from "./chat/agent-graph";
+import { showPromisedForm, unkeptPromise, type TurnResult } from "./chat/agent-graph";
 import { compactResult } from "@/core/compact";
 import { compactHistory, compressPassages, searchQuery } from "@/core/context";
 import { isClear } from "./tests";
@@ -403,7 +403,7 @@ test("a reply that says a form is in the chat shows the form, even when the agen
   const now = new Date().toISOString();
   const lead = { id: "act_lead", agentId: "agt_x", kind: "lead", name: "collect_lead", title: "Collect a lead", description: "When someone wants a quote.", config: { ...DEFAULT_ACTION_CONFIG.lead, fields: ["name", "email", "phone"] }, enabled: true, proceduresOnly: false, createdAt: now, updatedAt: now } as Action;
   assert.match(toolSpec(lead).description, /asking for: Name, Email, Phone \(optional\)/, "the agent is told what the form asks for, so it can't describe fields it doesn't have");
-  const turn = (text: string, calls: TurnResult["calls"] = []): TurnResult => ({ messages: [], calls, widgets: [], pending: [], text, handedOver: false, steps: 1, failures: 0, costUsd: 0 });
+  const turn = (text: string, calls: TurnResult["calls"] = []): TurnResult => ({ messages: [], calls, widgets: [], pending: [], text, handedOver: false, steps: 1, failures: 0, again: false, rechecked: false, costUsd: 0 });
   const context = { agent: { id: "agt_x" } as Agent };
 
   const shown = await showPromisedForm(turn("Please fill out the form below when you're ready."), [lead], context);
@@ -423,9 +423,37 @@ test("a reply that says a form is in the chat shows the form, even when the agen
   assert.equal((await showPromisedForm(turn("Please fill out the form below."), [lead, returns], context)).widgets.length, 0, "and when the reply doesn't say which, none is guessed");
 });
 
+test("a reply that says a person is joining or the team has the case, when no action did it, goes back to the agent once", () => {
+  for (const [said, claim] of [
+    ["I'm connecting you with a member of our team now.", "person"],
+    // Seen live: said, a question asked, and the customer's answer led elsewhere, so nobody came.
+    ["I’m sorry about that—I’ll get someone from the team to help you. Could you let me know what you’d like assistance with today?", "person"],
+    ["Once I have that, I'll bring someone from the team in.", "person"],
+    ["One of our specialists will join this chat shortly.", "person"],
+    ["I've passed your request on to our team, and they'll email you.", "team"],
+    ["I've opened a ticket for this.", "team"],
+    ["Please fill out the form below.", "form"],
+  ] as const) {
+    assert.ok(claimsIn(said).includes(claim), `"${said}" claims ${claim}`);
+  }
+  for (const said of ["I can connect you with our team if you'd like.", "I can get someone from the team for you, if you'd like.", "Would you like me to pass this to the team?", "Our team replies within 2 working days.", "Once you submit the form, our team will be in touch."]) {
+    assert.deepEqual(claimsIn(said), [], `"${said}" is an offer or a fact, not a claim`);
+  }
+
+  const now = new Date().toISOString();
+  const action = (kind: Action["kind"], name: string) => ({ id: `act_${name}`, agentId: "agt_x", kind, name, title: name, description: "", config: DEFAULT_ACTION_CONFIG[kind], enabled: true, proceduresOnly: false, createdAt: now, updatedAt: now }) as Action;
+  const actions = [action("handoff", "hand_over_to_person"), action("escalate", "create_ticket"), action("lead", "collect_lead")];
+  const context = { agent: { id: "agt_x" } as Agent };
+  assert.match(unkeptPromise("I'm connecting you with our team now.", [], actions, context) ?? "", /a person from the team is joining/, "a handover said but not done goes back to the agent");
+  assert.equal(unkeptPromise("I'm connecting you with our team now.", [{ name: "hand_over_to_person", arguments: "{}", result: "{}" }], actions, context), undefined, "a handover done is kept");
+  assert.match(unkeptPromise("I've passed this on to our team.", [{ name: "create_ticket", arguments: "{}", result: "{}", error: "HTTP 500" }], actions, context) ?? "", /passed this on to the team/, "a ticket that failed doesn't count");
+  assert.equal(unkeptPromise("Please fill out the form below.", [], actions, context), undefined, "with one form, it's shown without asking the agent again");
+  assert.equal(unkeptPromise("Thanks, that's all sorted.", [], actions, context), undefined, "a reply with no claim needs nothing");
+});
+
 test("someone who speaks of harming themselves is answered with care, never with the agent's \"can't help with that\"", () => {
   // Seen in testing: "i want to die" was blocked by the guardrails and answered "Sorry, I can't help with that here."
-  for (const said of ["i want to die", "I've been thinking about killing myself", "I just want to end it all", "I don't want to live anymore", "sometimes I hurt myself", "suicidal thoughts again"]) {
+  for (const said of ["i want to die", "I've been thinking about killing myself", "I just want to end it all", "I don’t want to live anymore", "sometimes I hurt myself", "suicidal thoughts again"]) {
     assert.ok(speaksOfSelfHarm(said), `"${said}" is heard`);
   }
   for (const said of ["this price is killing me", "I'd die for that blue glaze", "can I end my subscription?", "the mug arrived broken"]) {

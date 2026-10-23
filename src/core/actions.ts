@@ -142,12 +142,51 @@ export const fieldList = (fields: FieldSpec[]) => fields.map((f) => `${f.label}$
  * form is now on your screen". A form on a website ("the contact form on our site") doesn't count.
  */
 export function promisesForm(text: string): boolean {
+  const said = straightQuotes(text);
   return [
     /\bform (?:below|above)\b/i,
     /\bshow(?:ing)? you (?:a|the|our) (?:\w+ ){0,2}form\b/i,
     /\bform (?:is|has been|will be) (?:now )?(?:shown|displayed|showing|on (?:your |the )?screen|(?:right )?here)\b/i,
     /\bhere(?:'s| is) (?:a|the|our) (?:\w+ ){0,2}form\b/i,
-  ].some((pattern) => pattern.test(text));
+  ].some((pattern) => pattern.test(said));
+}
+
+/** Curly apostrophes and quotes as straight ones: models and phone keyboards write "I’ll", the patterns "I'll". */
+export const straightQuotes = (text: string) => text.replace(/[\u2018\u2019\u02bc]/g, "'").replace(/[\u201c\u201d]/g, '"');
+
+/** What a reply can tell the customer that only an action makes true. */
+export type Claim = "form" | "person" | "team";
+
+/**
+ * What a reply tells the customer is done or happening that only an action does: a form on their screen, a person
+ * from the team joining the chat, or their case passed on to the team. An offer ("I can connect you") isn't a claim.
+ */
+export function claimsIn(reply: string): Claim[] {
+  const text = straightQuotes(reply);
+  const claims: Claim[] = [];
+  if (promisesForm(text)) claims.push("form");
+  if (
+    [
+      /\b(?:i'?m|i am|i'?ll|i will|let me) (?:now )?(?:connect(?:ing)?|transfer(?:ring)?|put(?:ting)? you through|bring(?:ing)? in) (?:you|a|one|someone|our|the)\b/i,
+      /\b(?:connecting|transferring) you\b/i,
+      /\bi(?:'ve| have) (?:connected|transferred|handed) you\b/i,
+      /\b(?:a|one of our|someone from (?:our|the)) (?:team member|colleague|specialist|person|member of (?:our|the) team)s? (?:will|is going to|is about to) (?:join|take over|be with you)\b/i,
+      // A promise to bring someone in, now or "once you tell me": the customer waits for a person who never comes.
+      /\b(?:i'?ll|i will|let me) (?:get|bring(?: in)?|have) (?:someone|a (?:team member|colleague|person|specialist|member of (?:our|the) team)|one of our)\b/i,
+    ].some((pattern) => pattern.test(text))
+  ) {
+    claims.push("person");
+  }
+  if (
+    [
+      /\bi(?:'ve| have) (?:opened|created|raised|logged|submitted|filed) (?:a |an |your )?(?:ticket|support request|case)\b/i,
+      /\bi(?:'ve| have) (?:passed|forwarded|sent|shared|escalated|flagged)\b[^.!?]{0,40}\b(?:to|with) (?:our|the) team\b/i,
+      /\bi(?:'ve| have) let (?:our|the) team know\b/i,
+    ].some((pattern) => pattern.test(text))
+  ) {
+    claims.push("team");
+  }
+  return claims;
 }
 
 /** A tool name as the model needs it: lowercase letters, digits and underscores. */

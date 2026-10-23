@@ -3,10 +3,12 @@
 // edges: at most CALLS_PER_STEP actions a step, CALLS_PER_REPLY in a reply (after that the model must answer) and
 // STEPS rounds; a call that already failed the same way isn't run again; a handover to a person ends the turn.
 // Errors go back to the model compact, as the action's result; after FAILURES_IN_A_ROW failed calls it may only
-// bring in the team (the actions that hand over or open a ticket), or answer.
+// bring in the team (the actions that hand over or open a ticket), or answer. A reply that says something happened
+// that no action did (a form on screen, a person joining, the case passed to the team) goes back to the model once,
+// to do it or say it as an offer; a form the reply clearly means is shown without asking.
 
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
-import { promisesForm, type Action } from "@/core/actions";
+import { claimsIn, promisesForm, type Action } from "@/core/actions";
 import type { ChatWidget } from "@/core/widgets";
 import { chatWithTools, type AgentMessage } from "@/lib/llm";
 import type { ModelKey } from "@/lib/models";
@@ -45,6 +47,10 @@ const TurnState = Annotation.Root({
   steps: replace<number>(() => 0),
   /** Failed action calls in a row (a success resets it). */
   failures: replace<number>(() => 0),
+  /** The model is asked once more: its reply said something happened that no action did (unkeptPromise). */
+  again: replace<boolean>(() => false),
+  /** It has been asked once already, so its next reply stands. */
+  rechecked: replace<boolean>(() => false),
   costUsd: Annotation<number>({ reducer: (a: number, b: number) => a + b, default: () => 0 }),
 });
 
@@ -73,11 +79,18 @@ export async function runAgentTurn(input: {
       signal: input.signal,
       allowTools: state.calls.length < CALLS_PER_REPLY && tools.length > 0,
     });
-    if (!turn.toolCalls.length) return { text: turn.text, pending: [], costUsd: turn.costUsd };
+    if (!turn.toolCalls.length) {
+      // A reply that says a person is joining, a ticket is open or a form is there, when no action did it: once, the
+      // model is told so, and either does it now or says it as an offer.
+      const note = state.rechecked ? undefined : unkeptPromise(turn.text, state.calls, input.actions, input.context);
+      if (note) return { messages: [{ role: "assistant", content: turn.text } as AgentMessage, { role: "user", content: note } as AgentMessage], pending: [], again: true, rechecked: true, costUsd: turn.costUsd };
+      return { text: turn.text, pending: [], again: false, costUsd: turn.costUsd };
+    }
     const batch = turn.toolCalls.slice(0, CALLS_PER_STEP);
     return {
       messages: [{ role: "assistant", content: turn.text || null, tool_calls: batch.map((c) => ({ id: c.id, type: "function" as const, function: { name: c.name, arguments: c.arguments } })) } as AgentMessage],
       pending: batch,
+      again: false,
       costUsd: turn.costUsd,
     };
   };
@@ -118,7 +131,7 @@ export async function runAgentTurn(input: {
     .addNode("think", think)
     .addNode("act", act)
     .addEdge(START, "think")
-    .addConditionalEdges("think", (state) => (state.pending.length ? "act" : END), ["act", END])
+    .addConditionalEdges("think", (state) => (state.pending.length ? "act" : state.again ? "think" : END), ["act", "think", END])
     .addConditionalEdges("act", (state) => (state.handedOver || state.steps >= STEPS ? END : "think"), ["think", END])
     .compile();
 
@@ -144,6 +157,27 @@ export async function showPromisedForm(result: TurnResult, actions: Action[], co
   const outcome = await runAction(form, "{}", context);
   const record: ActionCallRecord = { name: form.name, arguments: "{}", result: JSON.stringify(outcome.result).slice(0, 2000) };
   return { ...result, calls: [...result.calls, record], widgets: outcome.widget ? [...result.widgets, outcome.widget] : result.widgets };
+}
+
+/**
+ * What a reply told the customer that no action this turn made true, as a note back to the model; nothing when every
+ * claim is kept. A form the reply clearly means is shown by showPromisedForm instead, with no extra call.
+ */
+export function unkeptPromise(text: string, calls: ActionCallRecord[], actions: Action[], context: ActionContext): string | undefined {
+  const claims = claimsIn(text);
+  if (!claims.length) return undefined;
+  const done = new Set(calls.filter((c) => !c.error).map((c) => actions.find((a) => a.name === c.name)?.kind ?? ""));
+  const formDone = [...done].some((k) => FORM_KINDS.has(k));
+  const toTeam = done.has("handoff") || done.has("escalate") || (Boolean(context.messaging) && formDone);
+  const forms = actions.filter((a) => FORM_KINDS.has(a.kind));
+  const formShownAnyway = !context.messaging && (forms.length === 1 || Boolean(formMeant(text, forms)));
+  const unkept = [
+    claims.includes("form") && !formDone && !formShownAnyway ? "that a form is on their screen" : "",
+    claims.includes("person") && !toTeam ? "that a person from the team is joining or taking over" : "",
+    claims.includes("team") && !toTeam ? "that you've passed this on to the team" : "",
+  ].filter(Boolean);
+  if (!unkept.length) return undefined;
+  return `(A note from Keel, not the customer, which they never see: your reply told the customer ${unkept.join(" and ")}, but none of your actions has done that. If the customer wants it and one of your actions does it, call that action now. Otherwise write your reply again without saying it happened: offer it, or give the contact details you know. Don't mention this note.)`;
 }
 
 /** Words every form shares, which tell forms apart from nothing. */

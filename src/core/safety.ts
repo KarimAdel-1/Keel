@@ -2,7 +2,8 @@
 // NVIDIA NeMo Guardrails blocks such a message, this is what they're told instead (src/platform/chat/converse.ts).
 
 /** Whether a message speaks of suicide or self-harm ("I want to die", "kill myself", "hurt myself"). */
-export function speaksOfSelfHarm(text: string): boolean {
+export function speaksOfSelfHarm(message: string): boolean {
+  const text = message.replace(/[\u2018\u2019\u02bc]/g, "'");
   return /\b(?:kill(?:ing)? myself|(?:want(?:ed)?|wanna|going) to die|end(?:ing)? (?:my life|it all)|suicid\w*|take my (?:own )?life|hurt(?:ing)? myself|self[- ]?harm\w*|(?:don'?t|do not) want to (?:live|be alive|be here))\b/i.test(text);
 }
 
