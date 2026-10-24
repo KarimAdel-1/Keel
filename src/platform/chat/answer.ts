@@ -290,9 +290,9 @@ type ReplyFlow = typeof ReplyState.State;
 
 /**
  * The agent's reply to the last question, as a LangGraph pipeline:
- * recall (a kept answer to the same opening question ends it here) → retrieve (the knowledge, kept lean) → route (the
- * procedure, the actions that fit, the model) → respond (streamed, or the think/act loop when there are actions) →
- * suggest (next questions) → remember (the answer, kept for the same question).
+ * recall (a kept answer to the same opening question ends it here) → retrieve (the knowledge, kept lean) and, at the
+ * same time, route (the procedure and the actions that fit) → respond (the model for the message, then streamed, or the
+ * think/act loop when there are actions) → suggest (next questions) → remember (the answer, kept for the same question).
  */
 export async function reply(agent: Agent, history: Turn[], question: string, options: ReplyOptions = {}): Promise<Reply> {
   const draft = options.draft;
@@ -313,18 +313,19 @@ export async function reply(agent: Agent, history: Turn[], question: string, opt
     return { query, found, passages: compressPassages(query, found.passages, { budget: REPLY_KNOWLEDGE }), costUsd: found.costUsd };
   };
 
-  const route = async (state: ReplyFlow): Promise<Partial<ReplyFlow>> => {
+  // Runs alongside retrieve: the procedure doesn't wait for the knowledge search (and its embedding) to finish.
+  const route = async (): Promise<Partial<ReplyFlow>> => {
     const historyText = history.slice(-6).map((t) => `${t.role === "user" ? "Customer" : "Agent"}: ${t.content}`).join("\n");
-    const picked = await pickProcedure(agent.id, question, historyText, options.activeProcedureId, draft?.procedures, state.found!.vector);
+    const picked = await pickProcedure(agent.id, question, historyText, options.activeProcedureId, draft?.procedures);
     const procedure = picked.procedure;
     // Every enabled action is offered (at most ten): picking by shared words would hide one worded differently.
     const actions = (await toolsFor(agent.id, procedure?.steps, draft?.actions)).actions;
-    const model = pickModel(agent, question, { relevance: state.found!.relevance, meaning: state.found!.usedMeaning, tools: actions.length, procedure: Boolean(procedure), turns: history.length });
-    return { procedure, actions, model, costUsd: picked.costUsd };
+    return { procedure, actions, costUsd: picked.costUsd };
   };
 
   const respond = async (state: ReplyFlow): Promise<Partial<ReplyFlow>> => {
-    const { model, actions, procedure, passages } = state;
+    const { actions, procedure, passages } = state;
+    const model = pickModel(agent, question, { relevance: state.found!.relevance, meaning: state.found!.usedMeaning, tools: actions.length, procedure: Boolean(procedure), turns: history.length });
     // Replies keep the model's full thinking: a blind, graded check on the real models found low thinking left out
     // conditions and details the full answer gave (scripts/quality-check.mts). Lightning and Nano think none (their
     // thinking would land in the reply).
@@ -349,7 +350,7 @@ export async function reply(agent: Agent, history: Turn[], question: string, opt
       const result = await chatStream(model, messages, { temperature: agent.config.temperature, maxTokens: REPLY_CEILING, reasoning, signal: options.signal, onText: stream.push });
       stream.end();
       const text = plainCitations(result.text);
-      return { text, citations: citationsIn(text, passages), costUsd: result.costUsd };
+      return { text, model, citations: citationsIn(text, passages), costUsd: result.costUsd };
     }
     const turn = await runAgentTurn({
       model,
@@ -363,7 +364,7 @@ export async function reply(agent: Agent, history: Turn[], question: string, opt
     });
     const text = plainCitations(turn.text) || (turn.handedOver ? "" : agent.config.fallback);
     emitInPieces(text, options.onText);
-    return { text, calls: turn.calls, widgets: turn.widgets, handedOver: turn.handedOver, citations: citationsIn(text, passages), costUsd: turn.costUsd };
+    return { text, model, calls: turn.calls, widgets: turn.widgets, handedOver: turn.handedOver, citations: citationsIn(text, passages), costUsd: turn.costUsd };
   };
 
   const fellBack = (state: ReplyFlow) => saysFallback(state.text, agent.config.fallback, state.citations.length > 0, state.calls.length > 0);
@@ -409,9 +410,8 @@ export async function reply(agent: Agent, history: Turn[], question: string, opt
     .addNode("suggest", suggest)
     .addNode("remember", remember)
     .addEdge(START, "recall")
-    .addConditionalEdges("recall", (state) => (state.reply ? END : "retrieve"), ["retrieve", END])
-    .addEdge("retrieve", "route")
-    .addEdge("route", "respond")
+    .addConditionalEdges("recall", (state) => (state.reply ? END : ["retrieve", "route"]), ["retrieve", "route", END])
+    .addEdge(["retrieve", "route"], "respond")
     .addConditionalEdges("respond", async (state) => ((await wantsFollowups(state)) ? "suggest" : "remember"), ["suggest", "remember"])
     .addEdge("suggest", "remember")
     .addEdge("remember", END)

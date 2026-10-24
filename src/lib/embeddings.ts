@@ -19,10 +19,12 @@ const RECENT_MAX = 2000;
 const recent = ((globalThis as unknown as { __keelRecentVectors?: Map<string, number[]> }).__keelRecentVectors ??= new Map());
 /** Knowledge passages are embedded once and stored; only short texts are worth remembering. */
 const RECENT_TEXT_MAX = 500;
+/** A short text being embedded right now: asked for again meanwhile, the same answer is waited for, not paid twice. */
+const inFlight = ((globalThis as unknown as { __keelEmbedding?: Map<string, Promise<number[]>> }).__keelEmbedding ??= new Map());
 
 /**
  * Embeds texts in batches. Returns one vector per text, in order, and what it cost. Short texts embedded recently
- * come from memory.
+ * come from memory, and one being embedded already is waited for (a customer's turn starts its question early).
  */
 export async function embed(texts: string[], options: { signal?: AbortSignal } = {}): Promise<{ vectors: number[][]; costUsd: number }> {
   if (!texts.length) return { vectors: [], costUsd: 0 };
@@ -36,7 +38,21 @@ export async function embed(texts: string[], options: { signal?: AbortSignal } =
   });
   const missing = [...new Set(texts.filter((_, i) => !vectors[i]))];
   if (!missing.length) return { vectors: vectors as number[][], costUsd: 0 };
-  const fresh = await embedNow(missing, options);
+  const running = missing.length === 1 ? inFlight.get(missing[0]) : undefined;
+  if (running) {
+    const vector = await running;
+    return { vectors: texts.map((_, i) => vectors[i] ?? vector), costUsd: 0 };
+  }
+  const work = embedNow(missing, options);
+  if (missing.length === 1 && missing[0].length <= RECENT_TEXT_MAX) {
+    const text = missing[0];
+    const shared = work.then((r) => r.vectors[0]);
+    // Handled here too, so a failure nobody else waited for is never an unhandled rejection.
+    shared.catch(() => {});
+    inFlight.set(text, shared);
+    void work.finally(() => inFlight.delete(text)).catch(() => {});
+  }
+  const fresh = await work;
   const byText = new Map(missing.map((t, i) => [t, fresh.vectors[i]]));
   for (const t of missing) {
     if (t.length > RECENT_TEXT_MAX) continue;

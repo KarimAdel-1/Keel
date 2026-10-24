@@ -7,6 +7,7 @@
 // it (it then arrives whole).
 
 import type { Agent, ChatLayout } from "@/core/agents";
+import { searchQuery } from "@/core/context";
 import { SELF_HARM_REPLY, speaksOfSelfHarm } from "@/core/safety";
 import { db } from "@/lib/db";
 import type { Picture } from "@/lib/llm";
@@ -20,6 +21,7 @@ import { activeProcedure, setActiveProcedure } from "../procedures";
 import { MESSAGING_CHANNELS, addMessage, conversationAgent, conversationMessages, startConversation, type Channel } from "../store";
 import { metered, type Meter } from "../usage";
 import { inPieces, reply, type Reply, type ReplyOptions, type Turn } from "./answer";
+import { startQuestionEmbedding } from "./retrieve";
 import { SPAM_CHECKS, checkSpam } from "./spam";
 
 /** The longest message a person can send. */
@@ -106,6 +108,9 @@ async function turn(input: TurnInput, meter: Meter): Promise<TurnResult> {
     await customerReplied(conversationId);
     return { conversationId, reply: quiet(agent, ""), status: "with_team", tokens: meter.inputTokens + meter.outputTokens };
   }
+  // The meaning of what the agent will search for is worked out now, while the spam and guardrail checks run: Token
+  // Factory's embeddings take from a fraction of a second to several, and this way the search rarely waits for one.
+  startQuestionEmbedding(searchQuery(message, history));
 
   const spam = agent.config.protection.spam;
   const visitorMessages = [...earlier.filter((m) => m.role === "user").map((m) => m.content), message];

@@ -29,11 +29,19 @@ const overlap = (words: Set<string>, text: string) => {
 /** A follow-up that leans on what came before: short, or pointing back ("it", "that", "and…"). */
 const leansBack = (question: string) => question.split(/\s+/).length <= 8 || /^(and|but|so|also|what about|how about)\b|\b(it|that|this|those|them|they|there)\b/i.test(question.trim());
 
+/** A reply that only says yes, no or thanks ("yes pls", "ok sure", "no thanks"): it asks nothing new. */
+const ACKNOWLEDGEMENT = /^(?:(?:yes|yeah|yep|yup|ok|okay|sure|please|pls|plz|no|nope|thanks|thank you|thx|go ahead|please do|sounds good|great|perfect|alright|cool|fine|of course)[\s!.,]*)+$/i;
+
 /**
  * What to search the knowledge for: the question, plus the customer's previous message when the question is a short
- * follow-up ("And how long does that take?"), so the search knows what "that" is.
+ * follow-up ("And how long does that take?"), so the search knows what "that" is. A reply that only says yes or thanks
+ * searches what the previous message did, word for word: its meaning is already worked out, so nothing is waited for.
  */
 export function searchQuery(question: string, history: { role: string; content: string }[]): string {
+  if (ACKNOWLEDGEMENT.test(question.trim())) {
+    const at = history.map((t) => t.role).lastIndexOf("user");
+    if (at >= 0) return searchQuery(history[at].content, history.slice(0, at));
+  }
   if (!leansBack(question)) return question;
   const previous = [...history].reverse().find((t) => t.role === "user")?.content;
   return previous ? `${question}\n${previous.slice(0, 300)}` : question;

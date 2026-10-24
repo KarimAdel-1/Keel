@@ -19,6 +19,7 @@ import { toolSpec } from "./actions";
 import { showPromisedForm, unkeptPromise, type TurnResult } from "./chat/agent-graph";
 import { compactResult } from "@/core/compact";
 import { compactHistory, compressPassages, searchQuery } from "@/core/context";
+import { embed } from "@/lib/embeddings";
 import { isClear } from "./tests";
 import { setTestTenant } from "@/lib/tenant";
 import { live } from "@/testing/live";
@@ -449,6 +450,41 @@ test("a reply that says a person is joining or the team has the case, when no ac
   assert.match(unkeptPromise("I've passed this on to our team.", [{ name: "create_ticket", arguments: "{}", result: "{}", error: "HTTP 500" }], actions, context) ?? "", /passed this on to the team/, "a ticket that failed doesn't count");
   assert.equal(unkeptPromise("Please fill out the form below.", [], actions, context), undefined, "with one form, it's shown without asking the agent again");
   assert.equal(unkeptPromise("Thanks, that's all sorted.", [], actions, context), undefined, "a reply with no claim needs nothing");
+});
+
+test("a quick reply waits for no new search: \"yes pls\" searches what the last message did, and a question being embedded is embedded once", async () => {
+  // Seen live: "yes pls" waited fifteen seconds for an embedding of "yes pls" plus the previous message.
+  const history = [
+    { role: "user", content: "I want to create a website for my company, can you help?" },
+    { role: "assistant", content: "Of course! What kind of website do you have in mind?" },
+  ];
+  const before = searchQuery(history[0].content, []);
+  for (const said of ["yes pls", "Yes please!", "ok thanks", "sure", "no thanks"]) assert.equal(searchQuery(said, history), before, `"${said}" searches what the last message did`);
+  assert.notEqual(searchQuery("yes, the blue one", history), before, "a reply that adds something is searched with it");
+
+  const realFetch = globalThis.fetch;
+  const savedKey = process.env.NEBIUS_API_KEY;
+  process.env.NEBIUS_API_KEY ||= "test-key";
+  let calls = 0;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+    if (!url.endsWith("/embeddings")) return realFetch(input, init);
+    calls++;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    return Response.json({ data: [{ index: 0, embedding: Array.from({ length: 1024 }, (_, i) => (i % 7) / 7) }], usage: { prompt_tokens: 6 } });
+  }) as typeof fetch;
+  try {
+    const question = `do you ship to Cairo ${Math.random()}`;
+    const [early, search] = await Promise.all([embed([question]), embed([question])]);
+    assert.equal(calls, 1, "the turn's early start and the search share one call");
+    assert.deepEqual(search.vectors[0], early.vectors[0]);
+    await embed([question]);
+    assert.equal(calls, 1, "and asked again later, it comes from memory");
+  } finally {
+    globalThis.fetch = realFetch;
+    if (savedKey === undefined) delete process.env.NEBIUS_API_KEY;
+    else process.env.NEBIUS_API_KEY = savedKey;
+  }
 });
 
 test("someone who speaks of harming themselves is answered with care, never with the agent's \"can't help with that\"", () => {

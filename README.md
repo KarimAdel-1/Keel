@@ -148,7 +148,7 @@ One Next.js application in one Node.js process, with Postgres. Many businesses s
 
 | Team | Graph |
 | --- | --- |
-| Customer turn, for every message | recall → retrieve → route → respond → suggest → remember, with the customer agent's own think-and-act loop inside "respond", and NeMo Guardrails before and after |
+| Customer turn, for every message | recall → retrieve and route, together → respond → suggest → remember, with the customer agent's own think-and-act loop inside "respond", and NeMo Guardrails before and after |
 | Testing | customer ⇄ agent, then check actions → first judge (Super) → careful judge (Ultra, only when needed) |
 | Improvement | prepare → baseline → diagnose → propose → evaluate → confirm, round after round |
 | Quality | write questions → ask → grade → check the tests → check the judges |

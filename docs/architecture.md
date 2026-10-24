@@ -57,9 +57,10 @@ flowchart TD
   L --> G{NeMo Guardrails: input rail}
   G -- blocked --> N[The agent's cannot-help message]
   G -- allowed --> R1[recall: the conversation so far, and the procedure in progress]
-  R1 --> R2[retrieve: keyword and meaning search, rankings fused]
-  R2 --> R3[route: choose a procedure, asked only when one could apply]
-  R3 --> R4[respond: the customer agent answers from the passages]
+  R1 --> R2[retrieve: keyword and meaning search, rankings fused; the meaning was started as the message arrived]
+  R1 --> R3[route, at the same time: choose a procedure, and the actions that fit]
+  R2 --> R4[respond: the model for the message; the customer agent answers from the passages]
+  R3 --> R4
   R4 <--> T[think and act: call the agent's actions, read what they return]
   R4 --> R5[suggest: follow-up questions, when turned on]
   R5 --> R6[remember: store the reply, its sources, actions and tokens]
@@ -67,7 +68,7 @@ flowchart TD
   O --> A[Reply with its sources]
 ```
 
-The graph is in `src/platform/chat/answer.ts` (recall → retrieve → route → respond → suggest → remember); the customer agent's own think-and-act loop is in `src/platform/chat/agent-graph.ts`; the checks around it are in `src/platform/chat/converse.ts`.
+The graph is in `src/platform/chat/answer.ts` (recall → retrieve and route together → respond → suggest → remember); the customer agent's own think-and-act loop is in `src/platform/chat/agent-graph.ts`; the checks around it are in `src/platform/chat/converse.ts`.
 
 ## A test run
 

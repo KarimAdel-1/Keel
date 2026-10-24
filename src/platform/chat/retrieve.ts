@@ -3,7 +3,10 @@
 // the same meaning in other words. If the embedding call is slow (Token Factory's took from 1.5 to 56 seconds in our
 // measurements), keywords answer alone when they clearly match; when they don't, the search waits longer for the
 // meaning, because an answer worded differently from the question ("a message with a present" for "a handwritten
-// note") is found only by meaning, and a correct answer a few seconds later beats a fast "I don't know".
+// note") is found only by meaning, and a correct answer a few seconds later beats a fast "I don't know". Not for ever,
+// though: most embeddings take one or two seconds, and past six a customer is kept waiting for one that may not come
+// (one took longer than fifteen in a live chat), so keywords answer. The customer's turn starts the embedding as soon
+// as the message arrives (src/platform/chat/converse.ts), so most of that wait is already over by the time it's needed.
 
 import type { Passage } from "@/core/agents";
 import { bm25, fuse, terms } from "@/core/search";
@@ -13,9 +16,14 @@ import { agentChunks, type StoredChunk } from "../store";
 /** How long a question's embedding may take before keywords that clearly match answer alone. */
 export const EMBED_WAIT_MS = 2500;
 /** How long it may take when keywords alone don't clearly match. */
-export const EMBED_WAIT_WEAK_MS = 15_000;
+export const EMBED_WAIT_WEAK_MS = 6000;
 /** A keyword match this strong (BM25, as 0 to 1) answers alone when the meaning search is slow. */
 const STRONG_KEYWORDS = 0.6;
+
+/** Starts embedding a question before it's searched for, so the search finds it done (or under way): never fails. */
+export function startQuestionEmbedding(query: string): void {
+  if (query.trim()) void embed([query]).catch(() => {});
+}
 
 const termsCache = new WeakMap<StoredChunk[], string[][]>();
 
