@@ -368,8 +368,9 @@ export async function reply(agent: Agent, history: Turn[], question: string, opt
 
   const fellBack = (state: ReplyFlow) => saysFallback(state.text, agent.config.fallback, state.citations.length > 0, state.calls.length > 0);
 
-  // Suggested next questions only where a customer sees them (not in test runs), after an answer from the knowledge.
-  const followupsAction = async () => (options.test ? undefined : (draft?.actions ?? (await listActions(agent.id))).find((a) => a.kind === "followups" && a.enabled));
+  // Suggested next questions only where a customer sees them, after an answer from the knowledge: not in test runs, and
+  // not in a messaging app, which has no buttons to show them on.
+  const followupsAction = async () => (options.test || options.messaging ? undefined : (draft?.actions ?? (await listActions(agent.id))).find((a) => a.kind === "followups" && a.enabled));
   const wantsFollowups = async (state: ReplyFlow) => Boolean(!state.handedOver && !fellBack(state) && state.citations.length && (await followupsAction()));
   const suggest = async (state: ReplyFlow): Promise<Partial<ReplyFlow>> => {
     const follow = await suggestFollowups(agent, question, state.text, ((await followupsAction())!.config as ActionConfigs["followups"]).count);

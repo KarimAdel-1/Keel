@@ -11,7 +11,8 @@ import { signUp } from "./accounts";
 import { listTickets, replyAsTeam, ticketEvents } from "./helpdesk";
 import { getIntegration, receiveWebhook, saveIntegration, verifyWebhook, viewOf, withWidgets } from "./integrations";
 import { queueTraining, settled } from "./knowledge/jobs";
-import { addSource, conversationMessages, createAgent, startConversation } from "./store";
+import { addSource, conversationMessages, createAgent, startConversation, updateAgent } from "./store";
+import { allowMessage } from "./chat/limits";
 import { createAction, runAction, toolSpec } from "./actions";
 import { listSubmissions } from "./submissions";
 
@@ -48,6 +49,8 @@ async function shop() {
 test("replies are written for each app: no citation marks, WhatsApp's own bold, and long ones in parts", () => {
   assert.equal(forMessaging("telegram", "Returns are free [1]. **30 days** to return [2].")[0], "Returns are free. 30 days to return.");
   assert.equal(forMessaging("whatsapp", "You have **30 days** [1].")[0], "You have *30 days*.");
+  assert.equal(forMessaging("whatsapp", "## Your order\nIt has shipped.")[0], "*Your order*\nIt has shipped.", "a heading is bold on WhatsApp");
+  assert.equal(forMessaging("messenger", "## Your order\nSee [our policy](https://harbor.example/returns).")[0], "Your order\nSee our policy: https://harbor.example/returns.", "and plain elsewhere, with links written out");
   const long = Array.from({ length: 40 }, (_, i) => `Sentence number ${i} about our delivery times and costs.`).join(" ");
   const parts = forMessaging("instagram", long);
   assert.ok(parts.length > 1 && parts.every((p) => p.length <= 950), "Instagram's limit is kept");
@@ -153,11 +156,34 @@ test("chat cards reach a messaging app as text: nothing the chat would show is l
     { type: "slots", options: ["Sat 9:30am", "Sat 11am"] },
     { type: "summary", title: "Booking", rows: [{ label: "Date", value: "12 Nov" }] },
     { type: "table", columns: ["Size", "Price"], rows: [["20 cm", "£16"]] },
+    { type: "button", label: "Pay now", url: "https://harbor.example/pay" },
   ]);
   assert.equal(
     text,
-    "Here's your order.\n\nOrder HG-1043\n✓ Ordered\n✓ Packed\n→ Shipped\n○ Delivered\n\n• Harbour mug · £18 · https://harbor.example/mug\n\nTimes to choose from\n• Sat 9:30am\n• Sat 11am\n\nBooking\nDate: 12 Nov\n\nSize: 20 cm · Price: £16",
+    "Here's your order.\n\nOrder HG-1043\n✓ Ordered\n✓ Packed\n→ Shipped\n○ Delivered\n\n• Harbour mug · £18 · https://harbor.example/mug\n\nTimes to choose from\n• Sat 9:30am\n• Sat 11am\n\nBooking\nDate: 12 Nov\n\nSize: 20 cm · Price: £16\n\nPay now: https://harbor.example/pay",
   );
+});
+
+test("on a messaging app, the website chat's message limit holds too: past it, the customer is told once, and the agent isn't asked", async () => {
+  const { agent } = await shop();
+  const limit = { messages: 3, seconds: 300, message: "You've sent a lot of messages in a short time. Please wait a few minutes and try again." };
+  await updateAgent(agent.id, { config: { protection: { rateLimit: limit } } });
+  const saved = await saveIntegration(agent.id, { kind: "telegram", config: { botToken: "123456:ABCDEFGHIJKLMNOPQRSTUVWXYZ" } }, BASE);
+  assert.ok("integration" in saved);
+  const i = saved.integration;
+  const headers = new Headers({ "x-telegram-bot-api-secret-token": i.secret });
+  const update = (id: number) => JSON.stringify({ update_id: id, message: { message_id: id, chat: { id: 777, type: "private" }, from: { first_name: "Flo" }, text: `message ${id}` } });
+  // This account has already sent its three messages in the window.
+  for (let n = 0; n < limit.messages; n++) allowMessage(agent.id, "telegram:777", limit);
+
+  sent.length = 0;
+  await receiveWebhook(i.id, update(101), headers);
+  await receiveWebhook(i.id, update(102), headers);
+  await settled();
+  const told = sent.filter((s) => s.url.includes("/sendMessage"));
+  assert.deepEqual(told.map((s) => s.body.text), [limit.message], "told once that they're over the limit, not after every message");
+  const threads = await db().prepare("SELECT COUNT(*) AS n FROM channel_threads WHERE integration_id = ?").get<{ n: number | string }>(i.id);
+  assert.equal(Number(threads?.n), 0, "and the agent never answered: no conversation was started, no model was called");
 });
 
 test("on a messaging app, a form is filled in the conversation, and the answers are saved like a filled-in form", async () => {
@@ -177,6 +203,29 @@ test("on a messaging app, a form is filled in the conversation, and the answers 
   const [submission] = await listSubmissions(agent.id, ["lead"]);
   assert.deepEqual([submission.data.email, submission.conversationId], ["ana@cafe.example", conversationId]);
   assert.ok(submission.contactId, "and the lead becomes a contact");
+});
+
+test("a lead on Telegram: the agent asks for the details in the chat, never points to a form, and saves the answers", { skip }, async () => {
+  const { agent } = await shop();
+  await createAction(agent.id, "lead");
+  await queueTraining((await addSource(agent.id, { kind: "text", title: "Wholesale", content: "Cafés and shops can buy wholesale: 35% off retail for orders of 24 pieces or more. Our team sends a quote within 2 working days." })).id);
+  await settled();
+  const saved = await saveIntegration(agent.id, { kind: "telegram", config: { botToken: "123456:ABCDEFGHIJKLMNOPQRSTUVWXYZ" } }, BASE);
+  assert.ok("integration" in saved);
+  const i = saved.integration;
+  const headers = new Headers({ "x-telegram-bot-api-secret-token": i.secret });
+  const update = (id: number, text: string) => JSON.stringify({ update_id: id, message: { message_id: id, chat: { id: 5151, type: "private" }, from: { first_name: "Ana" }, text } });
+
+  sent.length = 0;
+  await receiveWebhook(i.id, update(201, "We run a café and want 50 mugs. Can your team send us a quote?"), headers);
+  await settled();
+  await receiveWebhook(i.id, update(202, "I'm Ana Silva, ana@cafe.example"), headers);
+  await settled();
+  const said = sent.filter((s) => s.url.includes("/sendMessage")).map((s) => String(s.body.text));
+  assert.ok(said.length >= 2, "both messages were answered in Telegram");
+  for (const text of said) assert.doesNotMatch(text, /form (?:below|above)|on (?:your|the) screen/i, `no form to point to in Telegram: "${text}"`);
+  const [lead] = await listSubmissions(agent.id, ["lead"]);
+  assert.equal(lead?.data.email, "ana@cafe.example", "the details given in the chat are saved for the team, like a filled-in form");
 });
 
 test("a photo sent on Telegram is fetched from Telegram and read by NVIDIA's vision model, for the agent and the team", { skip }, async () => {

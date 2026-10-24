@@ -156,14 +156,14 @@ export const INTEGRATION_INFO: Record<IntegrationKind, IntegrationInfo> = {
 export const MESSAGE_LIMIT: Record<MessagingKind, number> = { whatsapp: 4000, messenger: 1900, instagram: 950, telegram: 4000 };
 
 /**
- * A reply as a messaging app shows it: citation marks dropped, Markdown made plain (WhatsApp keeps *bold*), and cut into
- * parts at paragraph or sentence breaks when it's longer than the app accepts.
+ * A reply as a messaging app shows it: citation marks dropped, Markdown made plain (WhatsApp keeps *bold*, and shows
+ * headings in it), and cut into parts at paragraph or sentence breaks when it's longer than the app accepts.
  */
 export function forMessaging(kind: MessagingKind, text: string): string[] {
   let plain = text
     .replace(/\s?\[\d{1,2}\]/g, "")
     .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, "$1: $2")
-    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^#{1,6}\s+(.+)$/gm, kind === "whatsapp" ? "*$1*" : "$1")
     .replace(/`([^`]+)`/g, "$1");
   plain = kind === "whatsapp" ? plain.replace(/\*\*([^*]+)\*\*/g, "*$1*") : plain.replace(/\*\*([^*]+)\*\*/g, "$1");
   plain = plain.replace(/\n{3,}/g, "\n\n").trim();

@@ -41,6 +41,7 @@ import { json, newId, now } from "@/lib/rows";
 import { openSecret, sealSecret } from "@/lib/secrets";
 import { withTenant } from "@/lib/tenant";
 import { converse } from "./chat/converse";
+import { allowMessage } from "./chat/limits";
 import { upsertContact } from "./contacts";
 import { inBackground } from "./knowledge/jobs";
 import { asPicture } from "./pictures";
@@ -306,6 +307,9 @@ export async function relayDeskReplies(integration: Integration, externalId: str
 
 type Thread = { conversation_id: string };
 
+/** When each account over the message limit was last told so (in memory, like the limit itself). */
+const limitNotices = ((globalThis as unknown as { __keelLimitNotices?: Map<string, number> }).__keelLimitNotices ??= new Map<string, number>());
+
 /** Answers one customer message through the agent, in the conversation that customer has on this app. */
 async function answer(integration: Integration, m: Inbound): Promise<void> {
   // Platforms deliver a message again when they don't hear back in time: each is answered once.
@@ -314,6 +318,18 @@ async function answer(integration: Integration, m: Inbound): Promise<void> {
   const agent = await getAgent(integration.agentId);
   if (!agent || !agent.enabled) return;
   const kind = integration.kind as MessagingKind;
+  // The website chat's limit, per account on the app: a flood from one account can't run up the business's bill. The
+  // customer is told once a window, not after every message.
+  const limit = agent.config.protection.rateLimit;
+  const visitor = `${kind}:${m.from}`;
+  if (!allowMessage(agent.id, visitor, limit).ok) {
+    const told = limitNotices.get(`${agent.id}|${visitor}`) ?? 0;
+    if (Date.now() - told > limit.seconds * 1000) {
+      limitNotices.set(`${agent.id}|${visitor}`, Date.now());
+      await deliver(integration, m.from, limit.message);
+    }
+    return;
+  }
   let thread = await db().prepare("SELECT conversation_id FROM channel_threads WHERE integration_id = ? AND external_id = ?").get<Thread>(integration.id, m.from);
   if (!thread) {
     const conversationId = await startConversation(agent.id, kind, { from: m.from, ...(m.name ? { name: m.name } : {}) });
