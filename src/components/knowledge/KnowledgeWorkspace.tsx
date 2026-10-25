@@ -20,7 +20,7 @@ export function KnowledgeWorkspace({ agent, initial, continueHref }: { agent: Ag
 
   const hint = (
     <div className="flex gap-2.5 rounded-xl border border-dashed border-line-strong px-3.5 py-3 text-sm text-muted">
-      <Lightbulb className="mt-0.5 size-4 shrink-0 text-warn" />
+      <Lightbulb className="mt-0.5 size-4 shrink-0 text-muted" />
       <p>
         {ready
           ? "Ask a question your customers often ask. Each answer shows which source it came from: click it to see the passage."
@@ -32,7 +32,7 @@ export function KnowledgeWorkspace({ agent, initial, continueHref }: { agent: Ag
   );
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_440px]">
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
       <div className="min-w-0 space-y-6">
         <KnowledgeEditor agentId={agent.id} agentName={agent.config.appearance.displayName} initial={initial} onChange={onChange} />
         {continueHref && (
@@ -52,7 +52,7 @@ export function KnowledgeWorkspace({ agent, initial, continueHref }: { agent: Ag
           </div>
         )}
       </div>
-      <div className="lg:sticky lg:top-20 lg:self-start">
+      <div className="xl:sticky xl:top-20 xl:self-start">
         <ChatWindow agentId={agent.id} look={lookOf(agent.config.appearance)} endpoint={`/api/agents/${agent.id}/chat`} subtitle="Test chat · only you can see it" emptyHint={hint} className="h-[620px] max-h-[calc(100dvh-6rem)] rounded-2xl" />
       </div>
     </div>

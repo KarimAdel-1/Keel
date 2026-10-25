@@ -1,12 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { PHOTO_NOTE, pictureType } from "@/core/pictures";
+import { PHOTO_NOTE, asksForPhoto, pictureType } from "@/core/pictures";
 import { parseMeta, parseTelegram } from "@/lib/messaging";
 import { encodePng } from "@/lib/png";
 import { setTestTenant } from "@/lib/tenant";
 import { live } from "@/testing/live";
 import { signUp } from "./accounts";
+import { photoAskedAgain } from "./chat/agent-graph";
 import { converse } from "./chat/converse";
 import { queueTraining, settled } from "./knowledge/jobs";
 import { asPicture, pictureFromBase64, uploadText, withPhoto } from "./pictures";
@@ -53,7 +54,8 @@ test("photos are picked up from Telegram, WhatsApp, Messenger and Instagram mess
 test("a customer's photo: NVIDIA's vision model says what it shows, and the agent answers it with the business's policy", { skip }, async () => {
   const agent = await harbor();
   await queueTraining(
-    (await addSource(agent.id, { kind: "text", title: "Breakages", content: "# Breakages\nIf something arrives broken or faulty, we send a free replacement, or a full refund if you prefer. You don't need to send the broken piece back." })).id,
+    // A policy that says to email a photo: the agent mustn't ask for the one it already has.
+    (await addSource(agent.id, { kind: "text", title: "Breakages", content: "# Breakages\nIf something arrives broken or faulty, email a photo of it to hello@harbor.example within 7 days of delivery, with your order number. We send a free replacement, or a full refund if you prefer. You don't need to send the broken piece back." })).id,
   );
   await settled();
 
@@ -66,7 +68,23 @@ test("a customer's photo: NVIDIA's vision model says what it shows, and the agen
   const [asked] = (await conversationMessages(turn.conversationId)).filter((m) => m.role === "user");
   assert.match(asked.content, /^My mug arrived like this\.\n\n\[The customer sent a photo\. What it shows: /, "the team sees what the photo showed");
   assert.match(turn.reply.text, /replace|refund/i, `the agent's answer: ${turn.reply.text}`);
-  assert.doesNotMatch(turn.reply.text, /(send|email|upload|share) (us )?(a|the|your) (photo|picture)/i, `it doesn't ask for the photo it has: ${turn.reply.text}`);
+  assert.equal(asksForPhoto(turn.reply.text), false, `it doesn't ask for the photo it has: ${turn.reply.text}`);
+  assert.ok(turn.reply.citations.length, `it shows where the answer comes from: ${turn.reply.text}`);
+});
+
+test("a reply that asks for a photo the customer already sent is caught, and one that thanks them for it isn't", () => {
+  for (const asks of [
+    "Please email a photo of it to hello@harbor.example.",
+    "Could you send us a picture of the damage?",
+    "Just attach a few photos here.",
+    "You don’t need to send the broken piece back; just email a photo of the damage along with your order number.",
+  ]) {
+    assert.ok(asksForPhoto(asks), asks);
+    assert.match(photoAskedAgain(asks) ?? "", /already sent their photo/, asks);
+  }
+  for (const fine of ["Thanks for sending the photo, I can see the crack.", "You don't need to send another photo.", "There's no need to email a picture.", "Please email your order number."]) {
+    assert.equal(asksForPhoto(fine), false, fine);
+  }
 });
 
 test("a picture of a price list, and a scanned PDF of it, become knowledge word for word", { skip }, async () => {

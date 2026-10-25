@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { BackstageMessage, Proposal } from "@/platform/backstage";
-import { RichText } from "../chat/RichText";
+import { ReadableOutput } from "../reports/ReadableOutput";
 import { Notice, Spinner } from "../ui";
 
 const PROMPTS = ["What should I fix first?", "Run my tests", "Improve my agent", "Run a security scan", "What do customers ask that it can't answer?", "How much does it use?"];
@@ -90,7 +90,7 @@ export function BackstageChat({ agentId, agentName, initial, findings }: { agent
                 </p>
               )}
               <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${m.role === "user" ? "rounded-br-md bg-ink text-white" : "rounded-bl-md border border-line bg-panel"}`}>
-                {m.role === "user" ? <p className="whitespace-pre-wrap">{m.content}</p> : <RichText text={m.content} />}
+                {m.role === "user" ? <p className="whitespace-pre-wrap">{m.content}</p> : <ReadableOutput text={m.content} />}
               </div>
               {m.links.length > 0 && (
                 <p className="mt-1.5 flex flex-wrap gap-3 text-xs">
@@ -109,7 +109,7 @@ export function BackstageChat({ agentId, agentName, initial, findings }: { agent
                       <p className="mt-1 text-sm font-semibold">{p.title}</p>
                       <p className="mt-0.5 text-xs text-muted">{p.why}</p>
                       {p.question && <p className="mt-2 text-xs font-medium">Q: {p.question}</p>}
-                      <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap rounded-lg border border-line bg-panel p-3 font-sans text-xs leading-relaxed">{p.value}</pre>
+                      <details className="report-detail mt-3"><summary>Review proposed content</summary><div className="whitespace-pre-wrap text-sm leading-relaxed">{p.value}</div></details>
                       {p.applied ? (
                         <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-good">
                           <Check className="size-3.5" /> Applied

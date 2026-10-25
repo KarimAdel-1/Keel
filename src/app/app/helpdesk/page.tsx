@@ -51,7 +51,7 @@ export default async function HelpdeskPage({ searchParams }: PageProps<"/app/hel
   return (
     <>
       <PageBar icon={<LifeBuoy className="size-[18px]" />} title="Helpdesk inbox" actions={<BrowserAlertsLoader />} />
-      <div className="grid min-h-[calc(100dvh-65px)] lg:h-[calc(100dvh-65px)] lg:grid-cols-[220px_340px_minmax(0,1fr)]">
+      <div className="grid min-h-[calc(100dvh-57px)] lg:h-[calc(100dvh-57px)] lg:grid-cols-[180px_260px_minmax(0,1fr)] 2xl:grid-cols-[200px_300px_minmax(0,1fr)]">
         <nav className="border-b border-line p-3 lg:border-b-0 lg:border-r" aria-label="Views">
           {VIEWS.map((v) => (
             <Link key={v.key} href={href({ view: v.key })} className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${view === v.key ? "bg-panel-2 font-medium text-ink" : "text-muted hover:bg-panel-2/60 hover:text-ink"}`}>

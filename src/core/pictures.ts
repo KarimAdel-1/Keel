@@ -28,3 +28,13 @@ export const UNREAD_PHOTO = `${PHOTO_MARK}, which couldn't be read. Ask them to 
 
 /** The photo notes in a message, for showing the customer's own words without them. */
 export const PHOTO_NOTE = /\s*\[The customer sent a photo[^\]]*\]/g;
+
+// Each verb is checked on its own (the photo is looked ahead for, not taken), so "no need to send the piece back; just
+// email a photo" is still caught by its second verb.
+const PHOTO_REQUEST = /\b(?:e-?mail|send|share|attach|upload|forward)\b(?=[^.!?;\n]{0,40}?\b(?:photo|picture|image|pic)s?\b)/gi;
+const NO_NEED = /(?:no need to|n['’]t need to|not need to|n['’]t have to|needn['’]t)\s*$/i;
+
+/** A reply that asks the customer for a photo ("email a photo of it", "send us a picture"), not one that says there's no need. */
+export function asksForPhoto(text: string): boolean {
+  return [...text.matchAll(PHOTO_REQUEST)].some((m) => !NO_NEED.test(text.slice(Math.max(0, m.index - 30), m.index)));
+}

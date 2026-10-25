@@ -56,7 +56,7 @@ export function SettingsForm({ agent, stats }: { agent: Agent; stats: { chars: n
         <label className="block">
           <span className="label">Agent name</span>
           <input value={draft.name} onChange={(e) => set({ name: e.target.value })} className="field" maxLength={80} />
-          <span className="hint">The name visitors see is set in Look and feel.</span>
+          <span className="hint">Change the visitor-facing name in Try it → Display.</span>
         </label>
         <label className="mt-4 block">
           <span className="label">Industry</span>
@@ -81,7 +81,7 @@ export function SettingsForm({ agent, stats }: { agent: Agent; stats: { chars: n
       </Section>
 
       <Section title="Usage" description="What this agent holds and uses.">
-        <dl className="grid grid-cols-3 gap-4 text-sm">
+        <dl className="grid gap-4 text-sm sm:grid-cols-3">
           <div>
             <dt className="text-muted">Knowledge</dt>
             <dd className="mt-1 text-lg font-semibold tabular-nums">{stats.chars >= 1000 ? `${Math.round(stats.chars / 1000).toLocaleString("en-GB")}K` : stats.chars} chars</dd>

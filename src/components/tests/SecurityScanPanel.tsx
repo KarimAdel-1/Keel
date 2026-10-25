@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { summarizeAttempts } from "@/core/garak-suite";
 import type { SecurityScan } from "@/platform/security";
+import { ReportOverview } from "../reports/ReportOverview";
 import { EmptyState, Notice, Pill, Spinner, timeAgo } from "../ui";
 
 type Depth = "quick" | "thorough";
@@ -106,6 +107,7 @@ export function SecurityScanPanel({ agentId, initial, installed, railsOn }: { ag
         )}
       </section>
 
+      {summary && summary.attempts > 0 && <ReportOverview value={summary.attempts - summary.through} total={summary.attempts} label="Attacks resisted" attention={summary.through} title={summary.through ? "Review what got through" : "The tested attacks were resisted"} description="This scan is a sample of attacks. Open a category below to inspect the evidence." />}
       {!scan ? (
         <EmptyState icon={<ShieldCheck className="size-5" />} title="No scans yet" text="Run a quick scan to see which attacks your agent stands up to." />
       ) : (
@@ -166,8 +168,7 @@ export function SecurityScanPanel({ agentId, initial, installed, railsOn }: { ag
                               .slice(0, 3)
                               .map((a) => (
                                 <div key={a.id} className="rounded-lg border border-line bg-panel-2/50 p-2.5 text-xs">
-                                  <p className="line-clamp-3 text-muted">Attack: {a.prompt}</p>
-                                  <p className="mt-1 line-clamp-3">Agent: {a.output}</p>
+                                  <details><summary>Attack and agent response</summary><p className="mt-2 whitespace-pre-wrap break-words text-muted">Attack: {a.prompt}</p><p className="mt-2 whitespace-pre-wrap break-words">Agent: {a.output}</p></details>
                                 </div>
                               ))}
                             {!r.through && <p className="text-xs text-muted">Nothing got through.</p>}

@@ -107,14 +107,14 @@ export function ConversationView({ agentId, agentName, details, messages }: { ag
               ["Sentiment", details.sentiment ? details.sentiment[0].toUpperCase() + details.sentiment.slice(1) : "Not read yet"],
             ] as const
           ).map(([k, v]) => (
-            <div key={k} className="grid grid-cols-[140px_1fr] gap-3 py-3">
+            <div key={k} className="grid grid-cols-[100px_minmax(0,1fr)] gap-3 py-3 sm:grid-cols-[140px_minmax(0,1fr)]">
               <dt className="text-muted">{k}</dt>
-              <dd>{v}</dd>
+              <dd className="min-w-0 break-words">{v}</dd>
             </div>
           ))}
-          <div className="grid grid-cols-[140px_1fr] gap-3 py-3">
+          <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-3 py-3 sm:grid-cols-[140px_minmax(0,1fr)]">
             <dt className="text-muted">Contact</dt>
-            <dd>
+            <dd className="min-w-0 break-words">
               {details.contact ? (
                 <Link href={`/app/agents/${agentId}/contacts?q=${encodeURIComponent(details.contact.email ?? details.contact.name ?? "")}`} className="underline underline-offset-2">
                   {[details.contact.name, details.contact.email, details.contact.phone].filter(Boolean).join(" · ")}
@@ -124,7 +124,7 @@ export function ConversationView({ agentId, agentName, details, messages }: { ag
               )}
             </dd>
           </div>
-          <div className="grid grid-cols-[140px_1fr] gap-3 py-3">
+          <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-3 py-3 sm:grid-cols-[140px_minmax(0,1fr)]">
             <dt className="text-muted">Tickets</dt>
             <dd className="space-y-1">
               {details.tickets.length ? (

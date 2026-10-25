@@ -2,12 +2,10 @@ import { AppWindow, CircleAlert, Code2, ExternalLink, Maximize2, MessageCircle, 
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CopyCode } from "@/components/channel/CopyCode";
-import { ApiKeys } from "@/components/settings/ApiKeys";
 import { PageBar, PageBody } from "@/components/shell/PageBar";
 import { Pill } from "@/components/ui";
 import { CHAT_LAYOUTS, LAYOUT_INFO, type ChatLayout } from "@/core/agents";
 import { publicUrl } from "@/lib/public-url";
-import { listKeys } from "@/platform/apikeys";
 import { requireAgent } from "@/platform/session";
 
 export const metadata: Metadata = { title: "On your website" };
@@ -47,7 +45,7 @@ export default async function ChannelsPage({ params }: PageProps<"/app/agents/[i
       <PageBar icon={<Radio className="size-[18px]" />} title="On your website" />
       <PageBody>
         <p className="max-w-2xl text-sm text-muted">
-          Put {agent.config.appearance.displayName} in front of customers in any of these ways, or several at once. Each can have its own look and instructions; every conversation shows up in Activity.
+          Put {agent.config.appearance.displayName} in front of customers in any of these ways, or several at once. Each can have its own look and instructions; every conversation shows up in Conversations.
         </p>
         {!agent.enabled && (
           <div className="flex items-start gap-3 rounded-xl border border-warn/30 bg-warn-tint px-4 py-3 text-sm text-warn">
@@ -74,7 +72,7 @@ export default async function ChannelsPage({ params }: PageProps<"/app/agents/[i
                   </span>
                   <div className="min-w-0 flex-1">
                     <h2 className="flex flex-wrap items-center gap-2 text-[15px] font-semibold">
-                      {LAYOUT_INFO[layout].name} {main && <Pill tone="brand">Main</Pill>} {own && <Pill>Own instructions</Pill>}
+                      {LAYOUT_INFO[layout].name} {main && <Pill tone="neutral">Main</Pill>} {own && <Pill>Own instructions</Pill>}
                     </h2>
                     <p className="mt-0.5 text-sm text-muted">{LAYOUT_INFO[layout].text}</p>
                   </div>
@@ -115,7 +113,7 @@ export default async function ChannelsPage({ params }: PageProps<"/app/agents/[i
             <CopyCode code={curl} />
             <div>
               <p className="label">Keys for {workspace.name}</p>
-              <ApiKeys initial={await listKeys(workspace.id)} />
+              <Link href="/app/workspace#api-keys" className="btn btn-secondary">Manage API keys in Workspace settings</Link>
             </div>
           </div>
         </section>

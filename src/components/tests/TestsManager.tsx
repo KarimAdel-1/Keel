@@ -4,6 +4,8 @@ import { CheckCircle2, Pencil, Play, Plus, Sparkles, TestTubes, Trash2, Wand2, X
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { BatchSummary, TestCase, TestRun } from "@/platform/tests";
+import { ReportOverview } from "../reports/ReportOverview";
+import { ReadableOutput } from "../reports/ReadableOutput";
 import { Dialog } from "../Dialog";
 import { EmptyState, Notice, Pill, Spinner, timeAgo } from "../ui";
 
@@ -146,6 +148,8 @@ export function TestsManager({ agentId, initialTests, initialBatches, actionName
 
   return (
     <div className="space-y-6">
+      {tests.length > 0 && <ReportOverview value={tests.filter((t) => t.latest?.status === "passed").length} total={tests.length} label="Latest test results" attention={failing.length} title={running ? "Tests are running" : "See what works and what needs attention"} description="Results from the latest run of each test. Select a result below for findings, actions and the full conversation." />}
+
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => setEditing(EMPTY)} className="btn btn-secondary">
           <Plus className="size-4" /> New test
@@ -374,20 +378,7 @@ function RunDialog({ run, name, security, onClose, onEdit }: { run: TestRun; nam
   const v = run.verdict;
   return (
     <Dialog title={name} subtitle={<Result run={run} />} onClose={onClose} wide>
-      <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-        <ol className="space-y-3">
-          {run.transcript.map((t, i) => (
-            <li key={i} className={`flex flex-col ${t.role === "customer" ? "items-end" : "items-start"}`}>
-              <span className="mb-1 text-[11px] font-medium text-subtle">{t.role === "agent" ? "Agent" : security ? "Attack from the security scan, word for word" : "AI customer"}</span>
-              <div className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${t.role === "customer" ? "rounded-br-md bg-panel-2" : "rounded-bl-md border border-line"}`}>{t.content}</div>
-              {t.actions?.map((a, j) => (
-                <span key={j} className="mt-1 rounded bg-panel-2 px-1.5 py-0.5 font-mono text-[11px] text-muted">
-                  @{a.name} {a.arguments !== "{}" ? a.arguments : ""}
-                </span>
-              ))}
-            </li>
-          ))}
-        </ol>
+      <div className="flex flex-col gap-6">
         <aside className="space-y-4 rounded-xl border border-line bg-panel-2/40 p-4 text-sm">
           {v ? (
             <>
@@ -399,7 +390,7 @@ function RunDialog({ run, name, security, onClose, onEdit }: { run: TestRun; nam
                 <p className="mb-1 text-xs text-muted">The judge&apos;s reasons</p>
                 <ul className="list-disc space-y-1 pl-4">
                   {v.reasons.map((r, i) => (
-                    <li key={i}>{r}</li>
+                    <li key={i}><ReadableOutput text={r} label="full finding" /></li>
                   ))}
                 </ul>
               </div>
@@ -421,6 +412,19 @@ function RunDialog({ run, name, security, onClose, onEdit }: { run: TestRun; nam
             <p className="text-muted">No verdict: the run didn&apos;t finish.</p>
           )}
         </aside>
+        <details className="report-detail"><summary>Full conversation · {run.transcript.length} messages</summary><ol className="space-y-3">
+          {run.transcript.map((t, i) => (
+            <li key={i} className={`flex flex-col ${t.role === "customer" ? "items-end" : "items-start"}`}>
+              <span className="mb-1 text-[11px] font-medium text-subtle">{t.role === "agent" ? "Agent" : security ? "Attack from the security scan, word for word" : "AI customer"}</span>
+              <div className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${t.role === "customer" ? "rounded-br-md bg-panel-2" : "rounded-bl-md border border-line"}`}>{t.content}</div>
+              {t.actions?.map((a, j) => (
+                <span key={j} className="mt-1 rounded bg-panel-2 px-1.5 py-0.5 font-mono text-[11px] text-muted">
+                  @{a.name} {a.arguments !== "{}" ? a.arguments : ""}
+                </span>
+              ))}
+            </li>
+          ))}
+        </ol></details>
       </div>
     </Dialog>
   );

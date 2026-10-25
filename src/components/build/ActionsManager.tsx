@@ -1,39 +1,74 @@
 "use client";
 
 import { Bot, Code2, FileText, Link2, ListChecks, MessageSquarePlus, Plus, Trash2, UserRoundCheck, Users, Zap } from "lucide-react";
+import type { Industry } from "@/core/agents";
+import { ACTION_STARTERS, type ActionStarter } from "./business-templates";
+import { BusinessFilter } from "./BusinessFilter";
 import { useState } from "react";
 import { ACTION_INFO, ACTION_KINDS, type Action, type ActionConfigs, type ActionKind, type ApiParam } from "@/core/actions";
 import type { FieldSpec } from "@/core/widgets";
 import { Dialog } from "../Dialog";
 import { Notice, Pill, Spinner, Toggle } from "../ui";
 
-const ICON: Record<ActionKind, typeof Zap> = { escalate: UserRoundCheck, handoff: Users, api: Code2, lead: Bot, data: ListChecks, form: FileText, button: Link2, followups: MessageSquarePlus };
+const ICON: Record<ActionKind, typeof Zap> = {
+  escalate: UserRoundCheck,
+  handoff: Users,
+  api: Code2,
+  lead: Bot,
+  data: ListChecks,
+  form: FileText,
+  button: Link2,
+  followups: MessageSquarePlus,
+};
 const GROUPS = [...new Set(ACTION_KINDS.map((k) => ACTION_INFO[k].group))];
 
 /**
  * Build › Actions: what the agent can do besides answering. The ones it has, each on or off, and the catalogue to add
  * more, grouped like the work they do. Each opens an editor with its own settings.
  */
-export function ActionsManager({ agentId, initial, widgets }: { agentId: string; initial: Action[]; widgets: { id: string; name: string }[] }) {
+export function ActionsManager({
+  agentId,
+  initial,
+  widgets,
+  industry = "other",
+}: {
+  industry?: Industry;
+  agentId: string;
+  initial: Action[];
+  widgets: { id: string; name: string }[];
+}) {
+  const [business, setBusiness] = useState<Industry>(industry);
   const [actions, setActions] = useState(initial);
   const [editing, setEditing] = useState<Action | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState<ActionKind | null>(null);
 
-  async function add(kind: ActionKind) {
+  async function add(kind: ActionKind, preset?: ActionStarter) {
     setAdding(kind);
     setError(null);
-    const res = await fetch(`/api/agents/${agentId}/actions`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind }) });
+    const res = await fetch(`/api/agents/${agentId}/actions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind }),
+    });
     const body = (await res.json().catch(() => ({}))) as { action?: Action; error?: string };
     setAdding(null);
     if (!res.ok || !body.action) return setError(body.error ?? "The action couldn't be added.");
     setActions((a) => [...a, body.action!]);
-    setEditing(body.action);
+    setEditing(
+      preset
+        ? { ...body.action, title: preset.title, description: preset.description, config: { ...body.action.config, ...preset.config } as Action["config"] }
+        : body.action,
+    );
   }
 
   async function toggle(action: Action, enabled: boolean) {
     setActions((all) => all.map((a) => (a.id === action.id ? { ...a, enabled } : a)));
-    await fetch(`/api/agents/${agentId}/actions/${action.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled }) });
+    await fetch(`/api/agents/${agentId}/actions/${action.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled }),
+    });
   }
 
   return (
@@ -66,8 +101,38 @@ export function ActionsManager({ agentId, initial, widgets }: { agentId: string;
         </section>
       )}
 
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold">Templates for your business</h2>
+          <p className="mt-1 text-sm text-muted">Start with a common task, then review its settings. API actions need your own connection.</p>
+        </div>
+        <BusinessFilter value={business} onChange={setBusiness} />
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {ACTION_STARTERS[business].map((preset) => {
+            const Icon = ICON[preset.kind];
+            return (
+              <article key={preset.title} className="card flex flex-col p-5">
+                <div className="flex items-center justify-between">
+                  <Icon className="size-5 text-muted" />
+                  <span className="neutral-label">Action template</span>
+                </div>
+                <h3 className="mt-5 text-sm font-semibold">{preset.title}</h3>
+                <p className="mt-2 flex-1 text-sm leading-relaxed text-muted">{preset.description}</p>
+                <button
+                  type="button"
+                  disabled={adding !== null}
+                  onClick={() => void add(preset.kind, preset)}
+                  className="btn btn-secondary mt-5 self-start text-xs"
+                >
+                  {adding === preset.kind && <Spinner />} Use template
+                </button>
+              </article>
+            );
+          })}
+        </div>
+      </section>
       <section>
-        <h2 className="mb-1 text-[15px] font-semibold">Add an action</h2>
+        <h2 className="mb-1 text-[15px] font-semibold">All action types</h2>
         <p className="mb-4 text-sm text-muted">The agent decides when to use each one, from the sentence you write about it.</p>
         <div className="space-y-6">
           {GROUPS.map((group) => (
@@ -83,7 +148,12 @@ export function ActionsManager({ agentId, initial, widgets }: { agentId: string;
                       </span>
                       <p className="mt-4 text-[15px] font-semibold">{ACTION_INFO[k].title}</p>
                       <p className="mt-1 flex-1 text-sm text-muted">{ACTION_INFO[k].text}</p>
-                      <button type="button" onClick={() => void add(k)} disabled={adding !== null} className="btn btn-secondary mt-4 self-start px-3 py-1.5 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => void add(k)}
+                        disabled={adding !== null}
+                        className="btn btn-secondary mt-4 self-start px-3 py-1.5 text-xs"
+                      >
                         {adding === k ? <Spinner className="size-3.5" /> : <Plus className="size-3.5" />} Add
                       </button>
                     </div>
@@ -119,11 +189,32 @@ function FieldsEditor({ fields, onChange }: { fields: FieldSpec[]; onChange: (f:
         <div key={i} className="grid grid-cols-[1fr_120px_auto_auto] items-center gap-2">
           <input
             value={f.label}
-            onChange={(e) => onChange(fields.map((x, j) => (j === i ? { ...x, label: e.target.value, key: x.key || e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "_").slice(0, 40) } : x)))}
+            onChange={(e) =>
+              onChange(
+                fields.map((x, j) =>
+                  j === i
+                    ? {
+                        ...x,
+                        label: e.target.value,
+                        key:
+                          x.key ||
+                          e.target.value
+                            .toLowerCase()
+                            .replace(/[^a-z0-9]+/g, "_")
+                            .slice(0, 40),
+                      }
+                    : x,
+                ),
+              )
+            }
             className="field"
             placeholder="Label"
           />
-          <select value={f.type} onChange={(e) => onChange(fields.map((x, j) => (j === i ? { ...x, type: e.target.value as FieldSpec["type"] } : x)))} className="field">
+          <select
+            value={f.type}
+            onChange={(e) => onChange(fields.map((x, j) => (j === i ? { ...x, type: e.target.value as FieldSpec["type"] } : x)))}
+            className="field"
+          >
             <option value="text">Short text</option>
             <option value="long">Long text</option>
             <option value="email">Email</option>
@@ -133,23 +224,51 @@ function FieldsEditor({ fields, onChange }: { fields: FieldSpec[]; onChange: (f:
             <option value="choice">Choice</option>
           </select>
           <label className="flex items-center gap-1.5 text-xs text-muted">
-            <input type="checkbox" checked={f.required} onChange={(e) => onChange(fields.map((x, j) => (j === i ? { ...x, required: e.target.checked } : x)))} className="accent-[var(--ink)]" />
+            <input
+              type="checkbox"
+              checked={f.required}
+              onChange={(e) => onChange(fields.map((x, j) => (j === i ? { ...x, required: e.target.checked } : x)))}
+              className="accent-[var(--ink)]"
+            />
             Required
           </label>
-          <button type="button" onClick={() => onChange(fields.filter((_, j) => j !== i))} className="rounded-md p-1.5 text-muted hover:bg-panel-2" title="Remove">
+          <button
+            type="button"
+            onClick={() => onChange(fields.filter((_, j) => j !== i))}
+            className="rounded-md p-1.5 text-muted hover:bg-panel-2"
+            title="Remove"
+          >
             <Trash2 className="size-4" />
           </button>
           {f.type === "choice" && (
             <input
               value={(f.options ?? []).join(", ")}
-              onChange={(e) => onChange(fields.map((x, j) => (j === i ? { ...x, options: e.target.value.split(",").map((o) => o.trim()).filter(Boolean) } : x)))}
+              onChange={(e) =>
+                onChange(
+                  fields.map((x, j) =>
+                    j === i
+                      ? {
+                          ...x,
+                          options: e.target.value
+                            .split(",")
+                            .map((o) => o.trim())
+                            .filter(Boolean),
+                        }
+                      : x,
+                  ),
+                )
+              }
               className="field col-span-4"
               placeholder="Options, separated by commas"
             />
           )}
         </div>
       ))}
-      <button type="button" onClick={() => onChange([...fields, { key: `field_${fields.length + 1}`, label: "", type: "text", required: false }])} className="btn btn-secondary px-3 py-1.5 text-xs">
+      <button
+        type="button"
+        onClick={() => onChange([...fields, { key: `field_${fields.length + 1}`, label: "", type: "text", required: false }])}
+        className="btn btn-secondary px-3 py-1.5 text-xs"
+      >
         <Plus className="size-3.5" /> Add a field
       </button>
     </div>
@@ -207,8 +326,16 @@ function ActionEditor({
   async function testCall() {
     setTesting(true);
     setTestResult(null);
-    await fetch(`/api/agents/${agentId}/actions/${action.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ config }) });
-    const res = await fetch(`/api/agents/${agentId}/actions/${action.id}/test`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ args: testArgs }) });
+    await fetch(`/api/agents/${agentId}/actions/${action.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ config }),
+    });
+    const res = await fetch(`/api/agents/${agentId}/actions/${action.id}/test`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ args: testArgs }),
+    });
     const body = (await res.json().catch(() => ({}))) as { status?: number; body?: unknown; ms?: number; error?: string };
     setTesting(false);
     setTestResult(body.error ? `✕ ${body.error}` : `${body.status} in ${body.ms} ms\n${JSON.stringify(body.body, null, 2).slice(0, 3000)}`);
@@ -226,8 +353,12 @@ function ActionEditor({
           <button type="button" onClick={() => void remove()} className="btn btn-ghost mr-auto text-bad">
             <Trash2 className="size-4" /> Remove
           </button>
-          <button type="button" onClick={onClose} className="btn btn-secondary">Cancel</button>
-          <button type="button" onClick={() => void save()} disabled={saving} className="btn btn-primary">{saving ? "Saving…" : "Save"}</button>
+          <button type="button" onClick={onClose} className="btn btn-secondary">
+            Cancel
+          </button>
+          <button type="button" onClick={() => void save()} disabled={saving} className="btn btn-primary">
+            {saving ? "Saving…" : "Save"}
+          </button>
         </>
       }
     >
@@ -274,7 +405,12 @@ function ActionEditor({
                   <option key={m}>{m}</option>
                 ))}
               </select>
-              <input value={api.url} onChange={(e) => set({ url: e.target.value })} className="field font-mono text-xs" placeholder="https://api.yourbusiness.com/orders/{order_number}" />
+              <input
+                value={api.url}
+                onChange={(e) => set({ url: e.target.value })}
+                className="field font-mono text-xs"
+                placeholder="https://api.yourbusiness.com/orders/{order_number}"
+              />
             </div>
             <p className="hint -mt-3">Put a parameter in the URL as {"{name}"}; the others go in the query (GET) or the JSON body.</p>
             <div>
@@ -282,23 +418,51 @@ function ActionEditor({
               <div className="space-y-2">
                 {api.params.map((p, i) => (
                   <div key={i} className="grid grid-cols-[140px_100px_1fr_auto_auto] items-center gap-2">
-                    <input value={p.name} onChange={(e) => set({ params: api.params.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })} className="field font-mono text-xs" placeholder="name" />
-                    <select value={p.type} onChange={(e) => set({ params: api.params.map((x, j) => (j === i ? { ...x, type: e.target.value as ApiParam["type"] } : x)) })} className="field">
+                    <input
+                      value={p.name}
+                      onChange={(e) => set({ params: api.params.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })}
+                      className="field font-mono text-xs"
+                      placeholder="name"
+                    />
+                    <select
+                      value={p.type}
+                      onChange={(e) => set({ params: api.params.map((x, j) => (j === i ? { ...x, type: e.target.value as ApiParam["type"] } : x)) })}
+                      className="field"
+                    >
                       <option value="string">Text</option>
                       <option value="number">Number</option>
                       <option value="boolean">Yes/no</option>
                     </select>
-                    <input value={p.description} onChange={(e) => set({ params: api.params.map((x, j) => (j === i ? { ...x, description: e.target.value } : x)) })} className="field" placeholder="What it is, for the agent" />
+                    <input
+                      value={p.description}
+                      onChange={(e) => set({ params: api.params.map((x, j) => (j === i ? { ...x, description: e.target.value } : x)) })}
+                      className="field"
+                      placeholder="What it is, for the agent"
+                    />
                     <label className="flex items-center gap-1 text-xs text-muted">
-                      <input type="checkbox" checked={p.required} onChange={(e) => set({ params: api.params.map((x, j) => (j === i ? { ...x, required: e.target.checked } : x)) })} className="accent-[var(--ink)]" />
+                      <input
+                        type="checkbox"
+                        checked={p.required}
+                        onChange={(e) => set({ params: api.params.map((x, j) => (j === i ? { ...x, required: e.target.checked } : x)) })}
+                        className="accent-[var(--ink)]"
+                      />
                       Required
                     </label>
-                    <button type="button" onClick={() => set({ params: api.params.filter((_, j) => j !== i) })} className="rounded-md p-1.5 text-muted hover:bg-panel-2" title="Remove">
+                    <button
+                      type="button"
+                      onClick={() => set({ params: api.params.filter((_, j) => j !== i) })}
+                      className="rounded-md p-1.5 text-muted hover:bg-panel-2"
+                      title="Remove"
+                    >
                       <Trash2 className="size-4" />
                     </button>
                   </div>
                 ))}
-                <button type="button" onClick={() => set({ params: [...api.params, { name: "", type: "string", description: "", required: false }] })} className="btn btn-secondary px-3 py-1.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => set({ params: [...api.params, { name: "", type: "string", description: "", required: false }] })}
+                  className="btn btn-secondary px-3 py-1.5 text-xs"
+                >
                   <Plus className="size-3.5" /> Add a parameter
                 </button>
               </div>
@@ -308,14 +472,35 @@ function ActionEditor({
               <div className="space-y-2">
                 {api.headers.map((h, i) => (
                   <div key={i} className="grid grid-cols-[1fr_2fr_auto] gap-2">
-                    <input value={h.name} onChange={(e) => set({ headers: api.headers.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })} className="field font-mono text-xs" placeholder="Authorization" />
-                    <input value={h.value} onChange={(e) => set({ headers: api.headers.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)) })} className="field font-mono text-xs" placeholder="Bearer …" type="password" autoComplete="off" />
-                    <button type="button" onClick={() => set({ headers: api.headers.filter((_, j) => j !== i) })} className="rounded-md p-1.5 text-muted hover:bg-panel-2" title="Remove">
+                    <input
+                      value={h.name}
+                      onChange={(e) => set({ headers: api.headers.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })}
+                      className="field font-mono text-xs"
+                      placeholder="Authorization"
+                    />
+                    <input
+                      value={h.value}
+                      onChange={(e) => set({ headers: api.headers.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)) })}
+                      className="field font-mono text-xs"
+                      placeholder="Bearer …"
+                      type="password"
+                      autoComplete="off"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => set({ headers: api.headers.filter((_, j) => j !== i) })}
+                      className="rounded-md p-1.5 text-muted hover:bg-panel-2"
+                      title="Remove"
+                    >
                       <Trash2 className="size-4" />
                     </button>
                   </div>
                 ))}
-                <button type="button" onClick={() => set({ headers: [...api.headers, { name: "", value: "" }] })} className="btn btn-secondary px-3 py-1.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => set({ headers: [...api.headers, { name: "", value: "" }] })}
+                  className="btn btn-secondary px-3 py-1.5 text-xs"
+                >
                   <Plus className="size-3.5" /> Add a header
                 </button>
               </div>
@@ -330,15 +515,23 @@ function ActionEditor({
                   </option>
                 ))}
               </select>
-              <span className="hint block">Design them in More tools › Chat cards.</span>
+              <span className="hint block">Create and edit these on the Widgets page, under Actions & widgets.</span>
             </label>
             <div className="rounded-xl border border-line bg-panel-2/50 p-4">
               <p className="text-sm font-semibold">Test call</p>
               <p className="mb-3 text-xs text-muted">Calls your system for real with these values, so you can check it before the agent uses it.</p>
               <div className="flex flex-wrap gap-2">
-                {api.params.filter((p) => p.name).map((p) => (
-                  <input key={p.name} value={testArgs[p.name] ?? ""} onChange={(e) => setTestArgs({ ...testArgs, [p.name]: e.target.value })} className="field w-44" placeholder={p.name} />
-                ))}
+                {api.params
+                  .filter((p) => p.name)
+                  .map((p) => (
+                    <input
+                      key={p.name}
+                      value={testArgs[p.name] ?? ""}
+                      onChange={(e) => setTestArgs({ ...testArgs, [p.name]: e.target.value })}
+                      className="field w-44"
+                      placeholder={p.name}
+                    />
+                  ))}
                 <button type="button" onClick={() => void testCall()} disabled={testing} className="btn btn-secondary">
                   {testing && <Spinner />} Send test call
                 </button>
@@ -360,7 +553,12 @@ function ActionEditor({
                   const fields = (config.fields as string[]) ?? [];
                   return (
                     <label key={f} className="flex items-center gap-2 text-sm capitalize">
-                      <input type="checkbox" checked={fields.includes(f)} onChange={(e) => set({ fields: e.target.checked ? [...fields, f] : fields.filter((x) => x !== f) })} className="accent-[var(--ink)]" />
+                      <input
+                        type="checkbox"
+                        checked={fields.includes(f)}
+                        onChange={(e) => set({ fields: e.target.checked ? [...fields, f] : fields.filter((x) => x !== f) })}
+                        className="accent-[var(--ink)]"
+                      />
                       {f}
                     </label>
                   );

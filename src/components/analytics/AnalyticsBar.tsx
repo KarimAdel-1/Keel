@@ -27,9 +27,9 @@ export function AnalyticsBar({ agentId, base, range, unread, analyze = true }: {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex gap-1 rounded-lg border border-line bg-panel-2 p-0.5">
+        <div className="flex max-w-full flex-wrap gap-1 rounded-lg border border-line bg-panel-2 p-0.5">
           {ANALYTICS_RANGES.map(([key, label]) => (
-            <Link key={key} href={key === "30" ? base : `${base}?range=${key}`} className={`rounded-md px-3 py-1.5 text-sm font-medium ${range === key ? "bg-panel text-ink shadow-sm" : "text-muted hover:text-ink"}`}>
+            <Link key={key} aria-current={range === key ? "page" : undefined} href={key === "30" ? base : `${base}?range=${key}`} className={`rounded-md px-3 py-1.5 text-sm font-medium ${range === key ? "bg-panel text-ink shadow-sm" : "text-muted hover:text-ink"}`}>
               {label}
             </Link>
           ))}

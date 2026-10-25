@@ -142,6 +142,7 @@ test("procedures: a template names every action its steps use, and an action kep
   const agent = (await createAgent(workspace.id, "Harbor Goods", { industry: "retail" }));
   const template = PROCEDURE_TEMPLATES.find((t) => t.name === "Where is my order")!;
   assert.deepEqual(actionsIn(template.steps).sort(), template.needs.map((n) => n.name).sort(), "a template names every action its steps use");
+  assert.deepEqual(actionsIn("1. Ask them to email a photo to hello@harbor.example.\n2. Use @create_ticket (or @show_request_form)."), ["create_ticket", "show_request_form"], "an email address isn't an action");
   const lookup = (await createAction(agent.id, "api", { name: "look_up_order", config: { url: "https://shop.example/orders/{order_number}" } }));
   await updateAction(lookup.id, { proceduresOnly: true });
   assert.equal((await toolsFor(agent.id)).tools.length, 0, "outside a procedure, the agent can't use it");

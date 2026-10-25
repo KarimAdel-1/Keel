@@ -7,7 +7,7 @@ import { setTestTenant } from "@/lib/tenant";
 import { live } from "@/testing/live";
 import { signUp } from "./accounts";
 import { createAction, listActions, updateAction } from "./actions";
-import { CAUSE_TEXT, DEPTHS, applyImprovement, discardImprovement, getImprovement, ruledOut, startCheck, startImprovement } from "./improve";
+import { CAUSE_TEXT, DEPTHS, applyImprovement, discardImprovement, getImprovement, isFixed, ruledOut, startCheck, startImprovement } from "./improve";
 import { fixKey, forgetLessons, lessonsAboutFix, memoryOf, memoryStore, notesOf, recentLessons, remember, rememberDecision, rememberNote } from "./memory";
 import { queueTraining, settled } from "./knowledge/jobs";
 import { addSource, createAgent, getAgent, listSources } from "./store";
@@ -46,6 +46,21 @@ test("edits are exact: a passage that isn't there, or is there twice, is refused
   assert.equal(result.snapshot.config.model, "ultra");
   assert.deepEqual(result.rejected.map((r) => r.patch.kind), ["rules_replace", "instructions_add", "action_when"]);
   assert.equal(base.config.instructions, "Be kind. Be brief.", "the original is untouched");
+
+  // A procedure's steps may give the business's email address: it isn't a call to an action called @harbor.
+  const withActions = { ...base, actions: [{ name: "create_ticket" }], procedures: [{ name: "Return or refund", steps: "1. Answer." }] } as unknown as AgentSnapshot;
+  const steps = applyPatches(withActions, [
+    { kind: "procedure_steps", why: "", procedure: "Return or refund", steps: "1. If it arrived broken, ask them to email hello@harbor.example.\n2. Use @create_ticket." },
+    { kind: "procedure_steps", why: "", procedure: "Return or refund", steps: "1. Use @refund_now." },
+  ]);
+  assert.match(steps.snapshot.procedures[0].steps, /hello@harbor\.example/);
+  assert.deepEqual(steps.rejected.map((r) => r.reason), ["the steps call actions that don't exist: @refund_now"]);
+});
+
+test("a test counts as fixed when it passes clearly more often: from failing, or from failing now and then to always passing", () => {
+  assert.ok(isFixed(0, 2 / 3) && isFixed(1 / 3, 1) && isFixed(0.5, 1));
+  assert.ok(isFixed(2 / 3, 1), "2 of 3 to 3 of 3: a test that failed a third of the time is a target, so it can be fixed");
+  assert.ok(!isFixed(0, 1 / 3) && !isFixed(2 / 3, 2 / 3) && !isFixed(0.8, 0.9));
 });
 
 test("a new Q&A must quote the knowledge and can't change its numbers", async () => {

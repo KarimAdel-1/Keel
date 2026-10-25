@@ -4,6 +4,7 @@ import { Lightbulb, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import type { Suggestion } from "@/platform/suggestions";
+import { ReadableOutput } from "../reports/ReadableOutput";
 import { Dialog } from "../Dialog";
 import { EmptyState, Notice, Pill, Spinner, timeAgo } from "../ui";
 
@@ -45,12 +46,12 @@ export function SuggestionsList({ agentId, initial }: { agentId: string; initial
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex gap-1 rounded-lg border border-line bg-panel-2 p-0.5">
           {(["open", "resolved", "dismissed"] as const).map((v) => (
-            <button key={v} type="button" onClick={() => setView(v)} className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize ${view === v ? "bg-panel text-ink shadow-sm" : "text-muted"}`}>
+            <button key={v} type="button" onClick={() => setView(v)} aria-pressed={view === v} className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize ${view === v ? "bg-panel text-ink shadow-sm" : "text-muted"}`}>
               {v === "open" ? "To review" : v} <span className="text-muted">{count(v)}</span>
             </button>
           ))}
         </div>
-        <select value={kind} onChange={(e) => setKind(e.target.value as typeof kind)} className="field w-auto py-1.5">
+        <select aria-label="Suggestion type" value={kind} onChange={(e) => setKind(e.target.value as typeof kind)} className="field w-auto py-1.5">
           <option value="all">All kinds</option>
           <option value="gap">Unanswered questions</option>
           <option value="conflict">Conflicting sources</option>
@@ -78,20 +79,20 @@ export function SuggestionsList({ agentId, initial }: { agentId: string; initial
               <p className="mt-3 text-[15px] font-semibold">{s.title}</p>
               {s.kind === "gap" && s.detail.questions && (
                 <ul className="mt-2 space-y-1 text-sm text-muted">
-                  {s.detail.questions.slice(0, 4).map((q, i) => (
+                  {s.detail.questions.slice(0, 2).map((q, i) => (
                     <li key={i}>“{q}”</li>
                   ))}
-                  {s.detail.questions.length > 4 && <li>and {s.detail.questions.length - 4} more</li>}
+                  {s.detail.questions.length > 2 && <li><details className="mt-2"><summary className="cursor-pointer font-medium">View {s.detail.questions.length - 2} more questions</summary><ul className="mt-2 space-y-2">{s.detail.questions.slice(2).map((q, i) => <li key={i}>“{q}”</li>)}</ul></details></li>}
                 </ul>
               )}
               {s.kind === "conflict" && (
                 <div className="mt-3 space-y-2">
-                  {s.detail.explanation && <p className="text-sm">{s.detail.explanation}</p>}
+                  {s.detail.explanation && <div className="text-sm"><ReadableOutput text={s.detail.explanation} label="explanation" /></div>}
                   <div className="grid gap-2 sm:grid-cols-2">
                     {s.detail.passages?.map((p, i) => (
                       <div key={i} className="rounded-lg border border-line bg-panel-2/50 p-3 text-xs">
                         <p className="font-semibold">{p.title}</p>
-                        <p className="mt-1 line-clamp-4 text-muted">{p.text}</p>
+                        <div className="mt-2 text-muted"><ReadableOutput text={p.text} label="source passage" /></div>
                       </div>
                     ))}
                   </div>

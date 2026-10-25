@@ -36,7 +36,7 @@ export function Spinner({ className = "size-4" }: { className?: string }) {
 }
 
 export function Notice({ tone = "bad", children }: { tone?: "bad" | "warn" | "good" | "brand"; children: ReactNode }) {
-  return <p className={`rounded-lg px-3 py-2 text-sm ${PILL_TONE[tone]}`}>{children}</p>;
+  return <div role={tone === "bad" ? "alert" : "status"} className={`rounded-lg px-3 py-2 text-sm ${PILL_TONE[tone]}`}>{children}</div>;
 }
 
 /** A number on the dashboard: what it counts, the number, and a line of context. */

@@ -18,14 +18,14 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
     })),
   );
   return (
-    <div className="min-h-dvh bg-panel lg:flex">
+    <div className="dashboard min-h-dvh bg-panel lg:flex">
       <Sidebar
         user={{ name: user.name, email: user.email }}
         workspace={workspace.name}
         agents={agents}
         workspaces={(await workspacesOf(user.id)).map((w) => ({ id: w.id, name: w.name, current: w.id === workspace.id }))}
       />
-      <main className="min-w-0 flex-1 bg-[#fbfbfc]">{children}</main>
+      <main className="min-w-0 flex-1 bg-[var(--bg)]">{children}</main>
       <TeamAlertsLoader />
     </div>
   );

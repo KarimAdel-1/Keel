@@ -60,7 +60,7 @@ export default async function ConversationsPage({ params, searchParams }: PagePr
       <PageBar icon={<MessagesSquare className="size-[18px]" />} title="Conversations" />
       <PageBody wide>
         <ConversationFilters agentId={agent.id} range={range} source={source} show={show} q={q} />
-        <div className="card grid min-h-[560px] overflow-hidden lg:h-[calc(100dvh-13rem)] lg:grid-cols-[340px_minmax(0,1fr)]">
+        <div className="card grid min-h-[560px] overflow-hidden lg:h-[calc(100dvh-13rem)] lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)]">
           <div className="flex min-h-0 flex-col border-b border-line lg:border-b-0 lg:border-r">
             <p className="border-b border-line px-4 py-2.5 text-xs text-muted">
               {conversations.length} conversation{conversations.length === 1 ? "" : "s"}

@@ -39,7 +39,7 @@ const AGENT_NAV: NavItem[] = [
   { label: "Home", icon: House, path: "/getting-started" },
   { label: "Try it", icon: Play, path: "" },
   {
-    label: "Teach it",
+    label: "Knowledge",
     icon: BookOpen,
     children: [
       { label: "What it knows", path: "/sources" },
@@ -47,7 +47,7 @@ const AGENT_NAV: NavItem[] = [
     ],
   },
   {
-    label: "Check it",
+    label: "Tests & quality",
     icon: TestTubes,
     children: [
       { label: "Tests", path: "/tests" },
@@ -56,7 +56,7 @@ const AGENT_NAV: NavItem[] = [
     ],
   },
   {
-    label: "Put it live",
+    label: "Publish",
     icon: Radio,
     children: [
       { label: "On your website", path: "/channels" },
@@ -70,12 +70,12 @@ const AGENT_NAV: NavItem[] = [
 /** Everything else, under the "More tools" heading, always in view. */
 const MORE_NAV: NavItem[] = [
   {
-    label: "What it can do",
+    label: "Actions & widgets",
     icon: Wrench,
     children: [
       { label: "Actions", path: "/actions" },
       { label: "Step-by-step guides", path: "/procedures" },
-      { label: "Chat cards", path: "/widgets" },
+      { label: "Widgets", path: "/widgets" },
     ],
   },
   { label: "Answers to add", icon: MessageSquarePlus, path: "/suggestions" },
@@ -206,11 +206,11 @@ export function Sidebar({
           <Menu className="size-5" />
         </button>
       </div>
-      <aside className={`sticky top-0 hidden h-dvh shrink-0 border-r border-line bg-panel transition-[width] lg:block ${collapsed ? "w-[68px]" : "w-[260px]"}`}>{nav(collapsed)}</aside>
+      <aside className={`sticky top-0 hidden h-dvh shrink-0 dashboard-sidebar border-r border-line bg-panel transition-[width] lg:block ${collapsed ? "w-[68px]" : "w-[236px]"}`}>{nav(collapsed)}</aside>
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <button type="button" aria-label="Close menu" className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 w-[280px] max-w-[85vw] bg-panel shadow-raised">{nav(false)}</aside>
+          <aside className="absolute inset-y-0 left-0 dashboard-sidebar w-[280px] max-w-[85vw] bg-panel shadow-raised">{nav(false)}</aside>
         </div>
       )}
       {searching && <CommandMenu agents={agents} current={agent} onClose={() => setSearching(false)} />}
@@ -222,7 +222,7 @@ export function Sidebar({
 function MoreTools({ base, pathname, mini }: { base: string; pathname: string; mini: boolean }) {
   return (
     <div className="mt-2 border-t border-line pt-2">
-      {!mini && <p className="eyebrow px-2.5 pb-1 pt-2">More tools</p>}
+      {!mini && <p className="eyebrow px-2.5 pb-1 pt-2">Manage</p>}
       <ul className="space-y-0.5">
         {MORE_NAV.map((item) => (
           <NavRow key={item.label} item={item} base={base} pathname={pathname} mini={mini} />
@@ -238,7 +238,7 @@ function SideLink({ href, active, icon, label, mini, trailing }: { href: string;
       href={href}
       aria-current={active ? "page" : undefined}
       title={mini ? label : undefined}
-      className={`flex items-center gap-3 rounded-lg py-2 text-[14px] transition ${mini ? "justify-center px-2" : "px-2.5"} ${active ? "bg-panel-2 font-semibold text-text" : "text-[#26282d] hover:bg-panel-2"}`}
+      className={`flex items-center gap-3 rounded-lg py-2 text-[14px] transition ${mini ? "justify-center px-2" : "px-2.5"} ${active ? "bg-[var(--nav-active)] font-medium text-text" : "text-[#26282d] hover:bg-panel-2"}`}
     >
       {icon}
       {!mini && <span className="flex-1 truncate">{label}</span>}
@@ -296,7 +296,7 @@ function NavRow({ item, base, pathname, mini }: { item: NavItem; base: string; p
             const active = isActive(c.path);
             return (
               <li key={c.path}>
-                <Link href={href} aria-current={active ? "page" : undefined} className={`block rounded-md px-2.5 py-1.5 text-[13px] transition ${active ? "bg-panel-2 font-semibold text-text" : "text-muted hover:bg-panel-2 hover:text-text"}`}>
+                <Link href={href} aria-current={active ? "page" : undefined} className={`block rounded-md px-2.5 py-1.5 text-[13px] transition ${active ? "bg-[var(--nav-active)] font-medium text-text" : "text-muted hover:bg-panel-2 hover:text-text"}`}>
                   {c.label}
                 </Link>
               </li>
@@ -404,14 +404,14 @@ function GettingStarted({ steps, href }: { steps: SidebarAgent["steps"]; href: s
   const done = steps.filter((s) => s.done).length;
   if (!steps.length) return null;
   return (
-    <Link href={href} className="mx-3 mb-3 block rounded-xl bg-[#17181b] px-3.5 py-3 text-left text-white shadow-raised transition hover:bg-[#222428]">
+    <Link href={href} className="mx-3 mb-3 block rounded-xl border border-line bg-white/75 px-3.5 py-3 text-left text-text transition hover:bg-white">
       <span className="block text-sm font-semibold">Getting started</span>
-      <span className="block text-xs text-white/60">
+      <span className="block text-xs text-muted">
         {done} / {steps.length} completed
       </span>
       <span className="mt-2.5 flex gap-1">
         {steps.map((s) => (
-          <span key={s.title} className={`h-1 flex-1 rounded-full ${s.done ? "bg-white" : "bg-white/20"}`} />
+          <span key={s.title} className={`h-1 flex-1 rounded-full ${s.done ? "bg-ink" : "bg-panel-3"}`} />
         ))}
       </span>
     </Link>
@@ -422,7 +422,7 @@ function Account({ user, mini }: { user: { name: string; email: string }; mini: 
   const [open, setOpen] = useState(false);
   return (
     <div className={`relative flex items-center gap-2.5 border-t border-line py-3 ${mini ? "justify-center px-2" : "px-4"}`}>
-      <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#c7d2fe] to-[#fbcfe8] text-sm font-semibold text-[#1f2937]" aria-hidden>
+      <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-panel-3 text-sm font-semibold text-[#1f2937]" aria-hidden>
         {(user.name[0] ?? "?").toUpperCase()}
       </span>
       {!mini && (

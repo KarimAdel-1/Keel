@@ -13,6 +13,7 @@ import type { ChatWidget } from "@/core/widgets";
 import { chatWithTools, type AgentMessage } from "@/lib/llm";
 import type { ModelKey } from "@/lib/models";
 import { compactResult } from "@/core/compact";
+import { asksForPhoto } from "@/core/pictures";
 import type { ToolSpec } from "@/core/tools";
 import { formFields, runAction, type ActionContext } from "../actions";
 
@@ -66,6 +67,8 @@ export async function runAgentTurn(input: {
   temperature: number;
   reasoning?: "none" | "minimal" | "low" | "medium" | "high";
   signal?: AbortSignal;
+  /** The customer sent a photo in this conversation, so a reply asking for one is asked once more (photoAskedAgain). */
+  photoSent?: boolean;
 }): Promise<TurnResult> {
   // Past the failure limit, only the ways to a person stay on offer.
   const toPeople = new Set(input.actions.filter((a) => a.kind === "escalate" || a.kind === "handoff").map((a) => a.name));
@@ -81,8 +84,9 @@ export async function runAgentTurn(input: {
     });
     if (!turn.toolCalls.length) {
       // A reply that says a person is joining, a ticket is open or a form is there, when no action did it: once, the
-      // model is told so, and either does it now or says it as an offer.
-      const note = state.rechecked ? undefined : unkeptPromise(turn.text, state.calls, input.actions, input.context);
+      // model is told so, and either does it now or says it as an offer. The same for one that asks for a photo the
+      // customer already sent.
+      const note = state.rechecked ? undefined : (unkeptPromise(turn.text, state.calls, input.actions, input.context) ?? (input.photoSent ? photoAskedAgain(turn.text) : undefined));
       if (note) return { messages: [{ role: "assistant", content: turn.text } as AgentMessage, { role: "user", content: note } as AgentMessage], pending: [], again: true, rechecked: true, costUsd: turn.costUsd };
       return { text: turn.text, pending: [], again: false, costUsd: turn.costUsd };
     }
@@ -178,6 +182,17 @@ export function unkeptPromise(text: string, calls: ActionCallRecord[], actions: 
   ].filter(Boolean);
   if (!unkept.length) return undefined;
   return `(A note from Keel, not the customer, which they never see: your reply told the customer ${unkept.join(" and ")}, but none of your actions has done that. If the customer wants it and one of your actions does it, call that action now. Otherwise write your reply again without saying it happened: offer it, or give the contact details you know. Don't mention this note.)`;
+}
+
+/**
+ * A reply that asks for a photo the customer already sent in the chat, as a note back to the model. The rule against
+ * it is in the prompt, but a policy that says "email us a photo" won over it in every try (the cracked mug, 4 of 4).
+ */
+export function photoAskedAgain(text: string): string | undefined {
+  // The sentence itself is quoted: told only that the reply asked, the model kept the request in a rewrite.
+  const asking = text.split(/(?<=[.!?])\s+/).filter(asksForPhoto);
+  if (!asking.length) return undefined;
+  return `(A note from Keel, not the customer, which they never see: the customer already sent their photo in this chat, and the team sees it with the conversation, but your reply asks them for one: "${asking.join(" ")}" Write your reply again without asking for the photo, by email or any other way: where the policy says to send one, that step is done. Ask only for what's still missing (an order number, say). As before, end each sentence that uses a passage with its number in brackets, like [1]. Don't mention this note.)`;
 }
 
 /** Words every form shares, which tell forms apart from nothing. */

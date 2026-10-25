@@ -4,6 +4,7 @@ import { ExternalLink, Send, Sparkles, StickyNote } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ReadableOutput } from "../reports/ReadableOutput";
 import { Transcript, type TranscriptMessage } from "../dashboard/Transcript";
 import { Notice, Spinner, timeAgo } from "../ui";
 
@@ -112,7 +113,7 @@ export function TicketView({ ticket, statuses, messages, history }: { ticket: Ti
             </Link>
           )}
         </div>
-        {ticket.summary && <p className="mt-2 rounded-lg bg-panel-2 px-3 py-2 text-sm text-muted">{ticket.summary}</p>}
+        {ticket.summary && <div className="mt-2 rounded-lg bg-panel-2 px-3 py-2 text-sm text-muted"><ReadableOutput text={ticket.summary} label="full summary" /></div>}
       </div>
       <div className="flex gap-1 border-b border-line px-4">
         {(

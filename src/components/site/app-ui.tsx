@@ -15,8 +15,8 @@ import { TypingDots } from "./motion";
 /** Harbor Goods' chat, as its customers see it: the bold style in its blue. */
 export const LOOK: ChatLook = {
   displayName: "Harbor Goods",
-  color: "#2348d8",
-  style: "bold",
+  color: "#44546a",
+  style: "soft",
   theme: "light",
   welcome: ["Hi! Welcome to Harbor Goods. How can I help?"],
   suggestions: [],
@@ -44,7 +44,7 @@ export function AppWindow({ icon, title, actions, children, className = "", body
 export function ChatWindowShell({ children, name = LOOK.displayName, subtitle = "Usually answers in seconds", className = "" }: { children: ReactNode; name?: string; subtitle?: string; className?: string }) {
   return (
     <ChatFrame look={{ ...LOOK, displayName: name }} subtitle={subtitle} className={`rounded-2xl font-sans ${className}`}>
-      <div className="flex-1 space-y-3 overflow-hidden px-4 py-4">{children}</div>
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">{children}</div>
       <div className="px-3 pb-1.5">
         <InputShell>
           <span className="flex-1 py-2 text-[14px] text-[var(--c-muted)]">{LOOK.placeholder}</span>

@@ -1,5 +1,8 @@
 "use client";
 
+import type { Industry } from "@/core/agents";
+import { GOALS, INDUSTRY_GOALS } from "@/core/goals";
+import { BusinessFilter } from "./BusinessFilter";
 import { AtSign, ListOrdered, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
@@ -14,7 +17,10 @@ const AREAS = [...new Set(PROCEDURE_TEMPLATES.map((t) => t.area))];
  * Build › Procedures: step-by-step playbooks for one kind of request. The agent picks the one that fits the customer's
  * message and follows its steps, calling actions where a step says @name.
  */
-export function ProceduresManager({ agentId, initial, actions }: { agentId: string; initial: Procedure[]; actions: { name: string; title: string; enabled: boolean }[] }) {
+export function ProceduresManager({ agentId, initial, actions, industry = "other" }: { industry?: Industry; agentId: string; initial: Procedure[]; actions: { name: string; title: string; enabled: boolean }[] }) {
+  const [business, setBusiness] = useState<Industry>(industry);
+  const [showAll, setShowAll] = useState(false);
+  const recommended = new Set(INDUSTRY_GOALS[business].flatMap((key) => GOALS[key].procedures));
   const router = useRouter();
   const [procedures, setProcedures] = useState(initial);
   const [tab, setTab] = useState<"mine" | "templates">(initial.length ? "mine" : "templates");
@@ -112,12 +118,14 @@ export function ProceduresManager({ agentId, initial, actions }: { agentId: stri
 
       {tab === "templates" && (
         <div className="space-y-6">
-          {AREAS.map((area) => (
+          <div className="flex flex-wrap items-center justify-between gap-3"><BusinessFilter value={business} onChange={setBusiness} /><label className="flex items-center gap-2 text-sm text-muted"><input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />Show all templates</label></div>
+          <p className="text-sm text-muted">{showAll ? "All guides, ready to adapt to your business." : "Recommended guides for this business type. Review the steps before using them."}</p>
+          {AREAS.filter((area) => PROCEDURE_TEMPLATES.some((t) => t.area === area && (showAll || recommended.has(t.name)))).map((area) => (
             <div key={area}>
               <p className="eyebrow mb-2">{area}</p>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {PROCEDURE_TEMPLATES.map((t, index) =>
-                  t.area !== area ? null : (
+                  t.area !== area || (!showAll && !recommended.has(t.name)) ? null : (
                     <div key={t.name} className="card flex flex-col p-5">
                       <p className="text-[15px] font-semibold">{t.name}</p>
                       <p className="mt-1 flex-1 text-sm text-muted">{t.text}</p>
@@ -225,7 +233,7 @@ function ProcedureEditor({
             </div>
           )}
           <textarea ref={steps} value={draft.steps} onChange={(e) => setDraft({ ...draft, steps: e.target.value })} rows={12} spellCheck={false} className="field resize-y font-mono text-[13px] leading-relaxed" />
-          {actions.length === 0 && <p className="hint mt-1">Add actions in More tools › What it can do › Actions to call them from a step.</p>}
+          {actions.length === 0 && <p className="hint mt-1">Add actions in Actions & widgets › Actions to call them from a step.</p>}
         </div>
         {missing.length > 0 && <Notice tone="warn">The agent has no action called {missing.map((m) => `@${m}`).join(", ")}. Add it in Actions, or the step will be skipped.</Notice>}
         {error && <Notice>{error}</Notice>}

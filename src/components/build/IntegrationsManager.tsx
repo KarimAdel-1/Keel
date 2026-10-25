@@ -1,89 +1,165 @@
 "use client";
 
-import { Camera, Check, Copy, Hash, LifeBuoy, MessageCircle, MessagesSquare, Plug, Send, Ticket, Trash2, type LucideIcon } from "lucide-react";
+import { Camera, Check, Copy, Hash, LifeBuoy, MessageCircle, MessagesSquare, Send, Ticket, Trash2, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { INTEGRATION_INFO, INTEGRATION_KINDS, type IntegrationKind } from "@/core/integrations";
 import type { IntegrationView } from "@/platform/integrations";
 import { Dialog } from "../Dialog";
 import { Notice, Pill, Spinner, Toggle, timeAgo } from "../ui";
 
-const ICON: Record<IntegrationKind, LucideIcon> = { whatsapp: MessageCircle, messenger: MessagesSquare, instagram: Camera, telegram: Send, slack: Hash, zendesk: LifeBuoy, freshdesk: Ticket };
+const ICON: Record<IntegrationKind, LucideIcon> = {
+  whatsapp: MessageCircle,
+  messenger: MessagesSquare,
+  instagram: Camera,
+  telegram: Send,
+  slack: Hash,
+  zendesk: LifeBuoy,
+  freshdesk: Ticket,
+};
 const GROUPS = [...new Set(INTEGRATION_KINDS.map((k) => INTEGRATION_INFO[k].group))];
 
 /**
  * Channels › Apps and tools: the messaging apps the agent answers on, and the support tools the team already uses.
  * Each is connected with the business's own keys, checked with the platform before it's saved.
  */
-export function IntegrationsManager({ agentId, initial, publicBase, reachable }: { agentId: string; initial: IntegrationView[]; publicBase: string; reachable: boolean }) {
+export function IntegrationsManager({
+  agentId,
+  initial,
+  publicBase,
+  reachable,
+}: {
+  agentId: string;
+  initial: IntegrationView[];
+  publicBase: string;
+  reachable: boolean;
+}) {
+  const [filter, setFilter] = useState<"all" | "connected" | "error">("all");
+  const [category, setCategory] = useState("All categories");
+  const [search, setSearch] = useState("");
   const [items, setItems] = useState(initial);
   const [open, setOpen] = useState<{ kind: IntegrationKind; existing?: IntegrationView } | null>(null);
 
   async function toggle(item: IntegrationView, enabled: boolean) {
     setItems((all) => all.map((i) => (i.id === item.id ? { ...i, enabled } : i)));
-    await fetch(`/api/agents/${agentId}/integrations/${item.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled }) });
+    await fetch(`/api/agents/${agentId}/integrations/${item.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled }),
+    });
   }
 
+  const visible = INTEGRATION_KINDS.filter((k) => {
+    const connected = items.find((i) => i.kind === k);
+    return (
+      (filter === "all" || (filter === "connected" ? connected && connected.status !== "error" : connected?.status === "error")) &&
+      (category === "All categories" || INTEGRATION_INFO[k].group === category) &&
+      `${INTEGRATION_INFO[k].title} ${INTEGRATION_INFO[k].text}`.toLowerCase().includes(search.toLowerCase())
+    );
+  });
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {!reachable && (
         <Notice tone="warn">
-          Messaging apps reach Keel on a public https:// address, and this server is at {publicBase}. Put Keel on your public address and set KEEL_PUBLIC_URL first (see Go live in the README). Slack, Zendesk and Freshdesk work from anywhere.
+          Messaging apps need a public HTTPS address before they can receive messages. Team support tools can still be connected.
+          <details className="mt-2">
+            <summary>Connection setup</summary>
+            <span className="mt-2 block">Current address: {publicBase}. Set KEEL_PUBLIC_URL to your public address; see Go live in the README.</span>
+          </details>
         </Notice>
       )}
-      {items.length > 0 && (
-        <section>
-          <h2 className="mb-3 text-[15px] font-semibold">Connected</h2>
-          <ul className="card divide-y divide-line overflow-hidden">
-            {items.map((i) => {
-              const Icon = ICON[i.kind];
-              return (
-                <li key={i.id} className="flex items-center gap-3 px-4 py-3">
-                  <span className="inline-flex size-9 items-center justify-center rounded-lg border border-line bg-panel-2">
-                    <Icon className="size-4" />
-                  </span>
-                  <button type="button" onClick={() => setOpen({ kind: i.kind, existing: i })} className="min-w-0 flex-1 text-left">
-                    <span className="flex items-center gap-2 text-sm font-medium">
-                      {INTEGRATION_INFO[i.kind].title} {i.status === "error" ? <Pill tone="bad">Needs attention</Pill> : <Pill tone="good">Connected</Pill>}
-                    </span>
-                    <span className="block truncate text-xs text-muted">
-                      {i.detail}
-                      {i.lastAt ? ` · last used ${timeAgo(i.lastAt)}` : ""}
-                    </span>
-                  </button>
-                  <Toggle checked={i.enabled} onChange={(on) => void toggle(i, on)} label={`Turn ${INTEGRATION_INFO[i.kind].title} on or off`} />
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
-
-      {GROUPS.map((group) => (
-        <section key={group}>
-          <h2 className="mb-1 text-[15px] font-semibold">{group}</h2>
-          <p className="mb-4 text-sm text-muted">
-            {group === "Messaging apps" ? "Customers write to you where they already are; the agent answers, and your team takes over from the Helpdesk." : "When a customer needs a person, your team hears about it where it already works."}
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {INTEGRATION_KINDS.filter((k) => INTEGRATION_INFO[k].group === group).map((k) => {
+      <div className="grid gap-6 lg:grid-cols-[190px_minmax(0,1fr)]">
+        <aside className="space-y-6 lg:border-r lg:border-line lg:pr-5">
+          <div>
+            <h2 className="mb-3 text-xs font-medium text-muted">Overview</h2>
+            <nav className="space-y-1" aria-label="Integration filters">
+              {(
+                [
+                  ["all", "All integrations", INTEGRATION_KINDS.length],
+                  ["connected", "Connected", items.filter((i) => i.status !== "error").length],
+                  ["error", "Needs attention", items.filter((i) => i.status === "error").length],
+                ] as const
+              ).map(([key, label, count]) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={filter === key}
+                  onClick={() => setFilter(key)}
+                  className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm ${filter === key ? "bg-panel-3 font-medium" : "text-muted hover:bg-panel-2"}`}
+                >
+                  <span>{label}</span>
+                  <span className="text-xs">{count}</span>
+                </button>
+              ))}
+            </nav>
+          </div>
+          <label className="block text-sm">
+            <span className="mb-2 block text-xs font-medium text-muted">Categories</span>
+            <select value={category} onChange={(e) => setCategory(e.target.value)} className="field text-xs">
+              {["All categories", ...GROUPS].map((g) => (
+                <option key={g}>{g}</option>
+              ))}
+            </select>
+          </label>
+        </aside>
+        <section className="min-w-0">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-xl font-semibold">Integrations</h1>
+            <input
+              type="search"
+              aria-label="Search integrations"
+              placeholder="Find an integration…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="field w-full sm:w-56"
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+            {visible.map((k) => {
               const Icon = ICON[k];
               const connected = items.find((i) => i.kind === k);
               return (
-                <div key={k} className="card flex flex-col p-5">
-                  <span className="inline-flex size-10 items-center justify-center rounded-xl border border-line bg-panel-2">
-                    <Icon className="size-[18px]" />
-                  </span>
-                  <p className="mt-4 text-[15px] font-semibold">{INTEGRATION_INFO[k].title}</p>
-                  <p className="mt-1 flex-1 text-sm text-muted">{INTEGRATION_INFO[k].text}</p>
-                  <button type="button" onClick={() => setOpen({ kind: k, ...(connected ? { existing: connected } : {}) })} className="btn btn-secondary mt-4 self-start px-3 py-1.5 text-xs">
-                    <Plug className="size-3.5" /> {connected ? "Settings" : "Connect"}
+                <article key={k} className="card flex flex-col p-5">
+                  <div className="flex items-center gap-3">
+                    <Icon className="size-6 shrink-0 text-muted" strokeWidth={1.5} />
+                    <h2 className="text-sm font-semibold">{INTEGRATION_INFO[k].title}</h2>
+                  </div>
+                  <p className="mt-4 flex-1 text-sm leading-relaxed text-muted">{INTEGRATION_INFO[k].text}</p>
+                  {connected && (
+                    <div className="mt-4 flex items-center justify-between gap-2">
+                      <Pill tone={connected.status === "error" ? "warn" : "neutral"}>{connected.status === "error" ? "Needs attention" : "Connected"}</Pill>
+                      <Toggle checked={connected.enabled} onChange={(on) => void toggle(connected, on)} label={`Turn ${INTEGRATION_INFO[k].title} on or off`} />
+                    </div>
+                  )}
+                  {connected?.lastAt && <p className="mt-2 text-xs text-muted">Last used {timeAgo(connected.lastAt)}</p>}
+                  <button
+                    type="button"
+                    onClick={() => setOpen({ kind: k, ...(connected ? { existing: connected } : {}) })}
+                    className="btn btn-secondary mt-5 self-end text-xs"
+                  >
+                    {connected ? "View settings" : "View details"}
                   </button>
-                </div>
+                </article>
               );
             })}
           </div>
+          {!visible.length && (
+            <div className="card px-6 py-12 text-center">
+              <p className="font-medium">No integrations match</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setFilter("all");
+                  setCategory("All categories");
+                  setSearch("");
+                }}
+                className="btn btn-secondary mt-4"
+              >
+                Clear filters
+              </button>
+            </div>
+          )}
         </section>
-      ))}
+      </div>
 
       {open && (
         <ConnectDialog
@@ -105,10 +181,27 @@ export function IntegrationsManager({ agentId, initial, publicBase, reachable }:
   );
 }
 
-function ConnectDialog({ agentId, kind, existing, onClose, onSaved, onDeleted }: { agentId: string; kind: IntegrationKind; existing?: IntegrationView; onClose: () => void; onSaved: (i: IntegrationView) => void; onDeleted: (id: string) => void }) {
+function ConnectDialog({
+  agentId,
+  kind,
+  existing,
+  onClose,
+  onSaved,
+  onDeleted,
+}: {
+  agentId: string;
+  kind: IntegrationKind;
+  existing?: IntegrationView;
+  onClose: () => void;
+  onSaved: (i: IntegrationView) => void;
+  onDeleted: (id: string) => void;
+}) {
   const info = INTEGRATION_INFO[kind];
   const desk = kind === "zendesk" || kind === "freshdesk";
-  const [values, setValues] = useState<Record<string, string>>(() => ({ ...Object.fromEntries(info.fields.filter((f) => f.choices).map((f) => [f.key, f.choices![0].value])), ...(existing?.config ?? {}) }));
+  const [values, setValues] = useState<Record<string, string>>(() => ({
+    ...Object.fromEntries(info.fields.filter((f) => f.choices).map((f) => [f.key, f.choices![0].value])),
+    ...(existing?.config ?? {}),
+  }));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -197,7 +290,9 @@ function ConnectDialog({ agentId, kind, existing, onClose, onSaved, onDeleted }:
         {existing?.status === "error" && !saved && <Notice tone="warn">The last message didn&apos;t go through: {existing.detail}</Notice>}
         {existing?.webhookUrl && (
           <div className="rounded-xl border border-line bg-panel-2/50 p-4">
-            <p className="text-sm font-medium">{kind === "telegram" ? "Connected to Keel" : desk ? `So your ${info.title} replies reach the chat` : "Paste these into your Meta app"}</p>
+            <p className="text-sm font-medium">
+              {kind === "telegram" ? "Connected to Keel" : desk ? `So your ${info.title} replies reach the chat` : "Paste these into your Meta app"}
+            </p>
             <p className="mt-0.5 text-xs text-muted">
               {kind === "telegram"
                 ? "Keel pointed your bot here by itself. Send it a message in Telegram to try it."

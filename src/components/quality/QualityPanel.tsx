@@ -4,6 +4,8 @@ import { BadgeCheck, ChevronDown, CircleCheck, CircleX, MessageSquareText, Scale
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { GradedAnswer, QualityCheck, QuestionKind } from "@/platform/quality";
+import { ReportOverview } from "../reports/ReportOverview";
+import { ReadableOutput } from "../reports/ReadableOutput";
 import { EmptyState, Notice, Pill, Spinner, Stat, timeAgo } from "../ui";
 
 const KIND_LABEL: Record<QuestionKind, string> = {
@@ -56,10 +58,10 @@ export function QualityPanel({ agentId, initial, hasKnowledge }: { agentId: stri
     <div className="space-y-5">
       <section className="card p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="max-w-3xl">
+          <div className="min-w-0 flex-1">
             <h2 className="text-[15px] font-semibold">How good is your agent?</h2>
             <p className="mt-1 text-sm text-muted">
-              Keel asks your agent questions written from what it knows: simple ones, several at once, follow-ups, questions in other words, and ones its knowledge doesn&apos;t cover. NVIDIA Nemotron 3 Ultra grades every answer blind against your information, next to the best answer Keel can give. Keel also checks your tests against your information, and checks the judges with planted mistakes. Your agent doesn&apos;t change.
+              See how accurately your agent answers, where it falls short, and whether your tests can be trusted.
             </p>
           </div>
           <button type="button" onClick={() => void start()} disabled={busy || running || !hasKnowledge} className="btn btn-primary">
@@ -130,12 +132,16 @@ function Report({ check, agentId }: { check: QualityCheck; agentId: string }) {
       <p className="text-xs text-muted">
         Checked {timeAgo(check.finishedAt ?? check.createdAt)} · {r.answers.length} questions · {number(check.tokens)} tokens
       </p>
+      <ReportOverview value={r.score} total={10} label="Answer quality" attention={r.answers.filter((a) => a.score < 8 || a.wrongFacts.length > 0).length} title="Your quality report" description={`${r.answers.length} answers checked against your information. Open any answer to see its evidence and comparison.`}>
+        <Link href={`/app/agents/${agentId}/improve`} className="btn btn-secondary text-xs">Review improvements</Link>
+        <span className="text-xs text-muted">Your agent has not been changed.</span>
+      </ReportOverview>
       <div className="grid gap-3 sm:grid-cols-3">
         <Stat
-          label="Answers"
+          label="Reference answers"
           icon={<MessageSquareText className="size-4" />}
-          value={`${r.score} / 10`}
-          note={gap >= 0.5 ? `The best answer Keel can give scores ${r.bestScore}: your settings cost some quality.` : `As good as the best answer Keel can give (${r.bestScore}).`}
+          value={`${r.bestScore} / 10`}
+          note={gap >= 0.5 ? `${gap} points above your agent. Compare the answers below.` : "Your agent is close to the reference score."}
         />
         <Stat
           label="Tests"
@@ -204,7 +210,8 @@ function Report({ check, agentId }: { check: QualityCheck; agentId: string }) {
       {r.judges.length > 0 && (
         <section>
           <h3 className="mb-2 text-sm font-semibold">The judges</h3>
-          <div className="card p-4 text-sm">
+          <details className="report-detail text-sm">
+            <summary>View {r.judges.length} judge checks</summary>
             <p className="mb-3 text-muted">Conversations that passed their tests, judged again with one fact in your agent&apos;s replies made wrong. Each one should fail.</p>
             <ul className="space-y-2">
               {r.judges.map((j) => (
@@ -216,7 +223,7 @@ function Report({ check, agentId }: { check: QualityCheck; agentId: string }) {
                 </li>
               ))}
             </ul>
-          </div>
+          </details>
         </section>
       )}
     </div>
@@ -224,12 +231,12 @@ function Report({ check, agentId }: { check: QualityCheck; agentId: string }) {
 }
 
 function AnswerRow({ a }: { a: GradedAnswer }) {
-  const [open, setOpen] = useState(a.score < 9 || a.wrongFacts.length > 0);
+  const [open, setOpen] = useState(false);
   return (
     <li>
-      <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm hover:bg-panel-2/60">
+      <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm hover:bg-panel-2/60">
         <Pill tone={tone(a.score)}>{a.score} / 10</Pill>
-        <span className="min-w-0 flex-1 truncate font-medium">{a.question}</span>
+        <span className="min-w-0 flex-1"><span className="block font-medium">{a.question}</span><span className="mt-1 block text-xs text-muted">{a.wrongFacts.length ? `${a.wrongFacts.length} unsupported fact${a.wrongFacts.length === 1 ? "" : "s"} · open to review` : a.score < 8 ? "Needs attention · open to review" : "Open answer and evidence"}</span></span>
         <span className="hidden shrink-0 text-xs text-muted sm:inline">{KIND_LABEL[a.kind]}</span>
         <ChevronDown className={`size-4 shrink-0 text-muted transition ${open ? "rotate-180" : ""}`} />
       </button>
@@ -246,10 +253,10 @@ function AnswerRow({ a }: { a: GradedAnswer }) {
           )}
           <div>
             <p className="mb-1 text-xs text-muted">Your agent&apos;s answer</p>
-            <p className="whitespace-pre-wrap rounded-lg border border-line p-3">{plain(a.answer)}</p>
+            <div className="rounded-lg border border-line p-3"><ReadableOutput text={plain(a.answer)} label="full answer" /></div>
           </div>
           <p>
-            <span className="font-medium">Grade:</span> {a.why}
+            <span className="font-medium">Why this score:</span> {a.why}
           </p>
           {a.wrongFacts.length > 0 && (
             <Notice>

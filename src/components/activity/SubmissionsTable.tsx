@@ -57,7 +57,7 @@ export function SubmissionsTable({
                   </th>
                 ))}
                 <th className="px-4 py-2.5 font-medium">Form</th>
-                <th className="px-4 py-2.5 font-medium" />
+                <th className="px-4 py-2.5 font-medium">Details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -70,7 +70,13 @@ export function SubmissionsTable({
                     </td>
                   ))}
                   <td className="whitespace-nowrap px-4 py-3 text-muted">{(s.actionId && formNames[s.actionId]) || "Form"}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right">
+                  <td className="min-w-48 px-4 py-3">
+                    <details className="mb-2">
+                      <summary className="cursor-pointer text-xs font-medium">View all fields</summary>
+                      <dl className="mt-3 space-y-3 rounded-lg border border-line bg-panel-2 p-3">
+                        {Object.entries(s.data).map(([key, value]) => <div key={key}><dt className="text-xs font-medium text-muted">{label(key)}</dt><dd className="mt-1 whitespace-pre-wrap break-words">{value}</dd></div>)}
+                      </dl>
+                    </details>
                     {s.conversationId && (
                       <Link href={`/app/agents/${agentId}/activity?c=${s.conversationId}`} className="text-xs font-medium underline underline-offset-2">
                         Conversation

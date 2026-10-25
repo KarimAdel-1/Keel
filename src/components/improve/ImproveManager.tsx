@@ -464,13 +464,13 @@ function SessionView({ agentId, session, names, actions, busy, onAct }: { agentI
 
       {s.best && (
         <section className="card p-5">
-          <h3 className="text-[15px] font-semibold">The edits</h3>
+          <h3 className="text-[15px] font-semibold">Proposed changes</h3>
           <p className="mb-3 mt-0.5 text-sm text-muted">Only these change. Everything else stays exactly as it is.</p>
-          <div className="space-y-2">
+          <details className="report-detail"><summary>Review {s.best.patches.length} proposed edits</summary><div className="space-y-2">
             {s.best.patches.map((p, i) => (
               <EditView key={i} patch={p} actions={actions} />
             ))}
-          </div>
+          </div></details>
         </section>
       )}
 
@@ -516,7 +516,7 @@ function SessionView({ agentId, session, names, actions, busy, onAct }: { agentI
                     <td className="px-4 py-3 font-medium">
                       {t.name} {s.regressions.includes(t.testId) && <span className="text-xs font-normal text-muted">· checked for breakage</span>}
                     </td>
-                    <td className="max-w-[320px] px-4 py-3 text-xs text-muted">{d ? `${CAUSE_TEXT[d.cause]}. ${d.explanation}` : t.passes === t.runs ? "Passes" : ""}</td>
+                    <td className="max-w-[320px] px-4 py-3 text-xs text-muted">{d ? <details><summary>{CAUSE_TEXT[d.cause]}</summary><p className="mt-2 leading-relaxed">{d.explanation}</p></details> : t.passes === t.runs ? "Passes" : ""}</td>
                     <td className="whitespace-nowrap px-4 py-3 tabular-nums">
                       {t.passes}/{t.runs}
                     </td>
@@ -529,7 +529,7 @@ function SessionView({ agentId, session, names, actions, busy, onAct }: { agentI
         </section>
       )}
 
-      {rounds.map((round) => (
+      {rounds.length > 0 && <details className="report-detail"><summary>How we checked this · {rounds.length} rounds of evidence</summary><div className="space-y-4">{rounds.map((round) => (
         <section key={round}>
           <h3 className="mb-2 text-sm font-semibold">Round {round}: fixes tried</h3>
           <div className="grid gap-3 lg:grid-cols-2">
@@ -540,7 +540,7 @@ function SessionView({ agentId, session, names, actions, busy, onAct }: { agentI
               ))}
           </div>
         </section>
-      ))}
+      ))}</div></details>}
     </div>
   );
 }

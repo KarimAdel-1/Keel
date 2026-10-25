@@ -176,8 +176,8 @@ export function ChannelStudio({ agent, sources, pageUrl, actions, initialChannel
           </>
         }
       />
-      <div className="flex flex-col lg:h-[calc(100dvh-4rem)] lg:flex-row">
-        <aside className="flex w-full flex-col border-b border-line bg-panel lg:w-[440px] lg:shrink-0 lg:border-b-0 lg:border-r">
+      <div className="flex flex-col lg:h-[calc(100dvh-3.5rem)] lg:flex-row">
+        <aside className="flex w-full flex-col border-b border-line bg-panel lg:w-[340px] xl:w-[400px] lg:shrink-0 lg:border-b-0 lg:border-r">
           <StartHere agentId={agent.id} />
           <div className="px-5 pt-5">
             <div className="grid grid-cols-4 rounded-xl bg-panel-2 p-1" role="tablist">
@@ -232,12 +232,12 @@ function LayoutSwitcher({ value, onChange, icon }: { value: ChatLayout; onChange
   const box = useOutside<HTMLDivElement>(open, () => setOpen(false));
   return (
     <div ref={box} className="relative flex items-center gap-3">
-      <span className="inline-flex size-8 items-center justify-center rounded-lg bg-brand-tint text-brand">{icon}</span>
+      <span className="inline-flex size-8 items-center justify-center rounded-lg border border-line bg-panel-2 text-muted">{icon}</span>
       <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex items-center gap-1.5 rounded-lg px-1 py-1 hover:bg-panel-2">
         {LAYOUT_INFO[value].name} <ChevronsUpDown className="size-4 text-muted" />
       </button>
       {open && (
-        <div className="absolute left-0 top-full z-30 mt-2 w-80 rounded-xl border border-line bg-panel p-1.5 text-sm font-normal shadow-raised">
+        <div className="absolute left-0 top-full z-30 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-line bg-panel p-1.5 text-sm font-normal shadow-raised">
           <p className="eyebrow px-2.5 pb-1 pt-1.5">Chat channel layout</p>
           {CHAT_LAYOUTS.map((l) => {
             const Icon = LAYOUT_ICON[l];

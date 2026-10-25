@@ -116,9 +116,9 @@ export function GuardrailsEditor({ agent, rails }: { agent: Agent; rails: RailsI
         <Block title="Message limit" text="How many messages one visitor can send in a while. It stops people and scripts from flooding the agent.">
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <span>Up to</span>
-            <input type="number" min={1} max={1000} value={draft.messages} onChange={(e) => set({ messages: Number(e.target.value) || 1 })} className="field w-24" />
+            <input aria-label="Message limit" type="number" min={1} max={1000} value={draft.messages} onChange={(e) => set({ messages: Number(e.target.value) || 1 })} className="field w-24" />
             <span>messages every</span>
-            <select value={draft.seconds} onChange={(e) => set({ seconds: Number(e.target.value) })} className="field w-auto">
+            <select aria-label="Message limit period" value={draft.seconds} onChange={(e) => set({ seconds: Number(e.target.value) })} className="field w-auto">
               {WINDOWS.map(([s, label]) => (
                 <option key={s} value={s}>
                   {label}
@@ -147,18 +147,18 @@ export function GuardrailsEditor({ agent, rails }: { agent: Agent; rails: RailsI
               Use the default
             </button>
           )}
-          <p className="hint mt-2">Paused conversations are marked in Activity; you can resume them there.</p>
+          <p className="hint mt-2">Paused conversations are marked in Conversations; you can resume them there.</p>
         </Block>
 
         <Block title="Allowed websites" text="Only these websites can show the chat. Leave it empty to allow any website.">
-          <textarea value={draft.domains} onChange={(e) => set({ domains: e.target.value })} rows={4} className="field resize-y font-mono text-[13px]" placeholder={"yourbusiness.com\n*.yourbusiness.com"} />
+          <textarea aria-label="Allowed websites" value={draft.domains} onChange={(e) => set({ domains: e.target.value })} rows={4} className="field resize-y font-mono text-[13px]" placeholder={"yourbusiness.com\n*.yourbusiness.com"} />
           <p className="hint mt-1">One per line. *.yourbusiness.com allows every subdomain. Keel&apos;s own chat page always works.</p>
         </Block>
 
         <p className="text-sm text-muted">
           Rules about what the agent says (topics to avoid, what never to promise) are in{" "}
           <Link href={`/app/agents/${agent.id}/instructions`} className="font-medium text-ink underline underline-offset-2">
-            Instructions
+            How it behaves
           </Link>
           .
         </p>

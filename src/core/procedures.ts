@@ -14,8 +14,11 @@ export interface Procedure {
   updatedAt: string;
 }
 
-/** The actions a procedure's steps call (without the @). */
-export const actionsIn = (steps: string) => [...new Set([...steps.matchAll(/@([a-z0-9_]+)/g)].map((m) => m[1]))];
+/**
+ * The actions a procedure's steps call (without the @). A call starts a word, so an email address in the steps
+ * ("email hello@harbor.example") isn't one: read as a call to @harbor, it got every fix that mentioned it rejected.
+ */
+export const actionsIn = (steps: string) => [...new Set([...steps.matchAll(/(?<![\w.+-])@([a-z0-9_]+)/g)].map((m) => m[1]))];
 
 export interface ProcedureTemplate {
   area: string;

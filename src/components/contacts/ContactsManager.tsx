@@ -63,7 +63,7 @@ export function ContactsManager({ agentId, initial, total: initialTotal, fields,
           className="relative min-w-[240px] flex-1"
         >
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-subtle" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name, email, phone or id" className="field pl-9" />
+          <input aria-label="Search contacts" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name, email, phone or id" className="field pl-9" />
         </form>
         <input ref={file} type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => e.target.files?.[0] && void importCsv(e.target.files[0])} />
         <button type="button" onClick={() => file.current?.click()} className="btn btn-secondary">
@@ -108,7 +108,7 @@ export function ContactsManager({ agentId, initial, total: initialTotal, fields,
             <tbody className="divide-y divide-line">
               {contacts.map((c) => (
                 <tr key={c.id} onClick={() => setViewing(c)} className="cursor-pointer hover:bg-panel-2/60">
-                  <td className="px-4 py-3 font-medium">{c.name || <span className="text-subtle">No name</span>}</td>
+                  <td className="px-4 py-3 font-medium"><button type="button" onClick={(e) => { e.stopPropagation(); setViewing(c); }} className="text-left underline-offset-4 hover:underline">{c.name || <span className="text-subtle">No name</span>}</button></td>
                   <td className="px-4 py-3">{c.email ?? ""}</td>
                   <td className="px-4 py-3">{c.phone ?? ""}</td>
                   {fields.slice(0, 3).map((f) => (

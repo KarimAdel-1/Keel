@@ -6,7 +6,7 @@ import type { Agent, AgentModel } from "@/core/agents";
 import { industryDefaults } from "@/core/industries";
 import { AUTO_BLURB, MODEL_KEYS, MODELS, tokenCount } from "@/lib/models";
 import type { Citation } from "@/platform/chat/answer";
-import { RichText } from "../chat/RichText";
+import { ReadableOutput } from "../reports/ReadableOutput";
 import { Dialog } from "../Dialog";
 import { TestChange } from "../improve/TestChange";
 import { PageBar, PageBody } from "../shell/PageBar";
@@ -39,7 +39,7 @@ function toConfig(d: Fields) {
 
 function Card({ title, text, aside, children, id }: { title: string; text?: string; aside?: React.ReactNode; children: React.ReactNode; id?: string }) {
   return (
-    <section id={id} className="scroll-mt-24 border-b border-line pb-7 last:border-b-0">
+    <section id={id} className="card scroll-mt-24 p-5">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
           <h2 className="text-[15px] font-semibold">{title}</h2>
@@ -145,7 +145,7 @@ export function InstructionsEditor({ agent }: { agent: Agent }) {
             </Card>
 
             <Card
-              title="General"
+              title="General instructions"
               text="The agent's job and tone, as you'd brief a new team member. Its language rules and formatting go here too."
               aside={
                 draft.instructions !== example && (
@@ -267,7 +267,7 @@ function CompareDialog({ agentId, saved, draft, onClose }: { agentId: string; sa
       <div className="min-h-40 flex-1 px-3 py-3 text-sm leading-relaxed">
         {side ? (
           <>
-            <RichText text={side.text} />
+            <ReadableOutput text={side.text} />
             <p className="mt-3 text-[11px] text-subtle">
               {side.model} · {tokenCount(side.tokens)} · confidence {side.confidence.toFixed(2)}
               {side.citations.length ? ` · from ${side.citations.map((c) => c.title).join(", ")}` : ""}

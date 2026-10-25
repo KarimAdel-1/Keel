@@ -27,19 +27,22 @@ export default async function WorkspacePage() {
     <>
       <PageBar icon={<Users className="size-[18px]" />} title="Workspace settings" />
       <PageBody>
-        <section className="card p-5">
+        <nav aria-label="Workspace sections" className="card flex flex-wrap gap-2 p-3">
+          {["Name", "Your alerts", "Limits", "Team", "Contact fields", "API keys"].map((title) => <a key={title} href={`#${title.toLowerCase().replaceAll(" ", "-")}`} className="btn btn-ghost text-sm">{title}</a>)}
+        </nav>
+        <section id="name" className="card scroll-mt-36 p-5">
           <h2 className="text-[15px] font-semibold">Name</h2>
           <p className="mb-4 mt-0.5 text-sm text-muted">Your team sees it in the sidebar. Customers never do.</p>
           <WorkspaceName initial={workspace.name} canEdit={workspace.role !== "member"} />
         </section>
 
-        <section className="card p-5">
+        <section id="your-alerts" className="card scroll-mt-36 p-5">
           <h2 className="text-[15px] font-semibold">Your alerts</h2>
           <p className="mb-4 mt-0.5 text-sm text-muted">So a customer who asks for a person never waits for someone to happen to look.</p>
           <AlertSettings initial={(await userSettings(user.id)).emailAlerts !== false} canEmail={canSendMail()} email={user.email} />
         </section>
 
-        <section className="card p-5">
+        <section id="limits" className="card scroll-mt-36 p-5">
           <h2 className="text-[15px] font-semibold">Limits</h2>
           <p className="mt-0.5 text-sm text-muted">They keep the server responsive and agents reliable. Model use has no limit: see Usage.</p>
           <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-4">
@@ -59,19 +62,19 @@ export default async function WorkspacePage() {
           </dl>
         </section>
 
-        <section className="card p-5">
+        <section id="team" className="card scroll-mt-36 p-5">
           <h2 className="text-[15px] font-semibold">Team</h2>
           <p className="mb-4 mt-0.5 text-sm text-muted">Everyone here can build agents and answer tickets in the Helpdesk inbox.</p>
           <TeamManager members={members.map((m) => ({ id: m.id, name: m.name, email: m.email, role: m.role }))} invites={await pendingInvites(workspace.id)} me={user.id} canManage={workspace.role !== "member"} limit={LIMITS.members} />
         </section>
 
-        <section className="card p-5">
+        <section id="contact-fields" className="card scroll-mt-36 p-5">
           <h2 className="text-[15px] font-semibold">Contact fields</h2>
           <p className="mb-4 mt-0.5 text-sm text-muted">Your own details about each contact, shared by every agent.</p>
           <ContactFields initial={await contactFields(workspace.id)} />
         </section>
 
-        <section className="card p-5">
+        <section id="api-keys" className="card scroll-mt-36 p-5">
           <h2 className="text-[15px] font-semibold">API keys</h2>
           <p className="mb-4 mt-0.5 text-sm text-muted">For the REST API. A key works with every agent in {workspace.name}.</p>
           <ApiKeys initial={await listKeys(workspace.id)} />

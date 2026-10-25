@@ -364,8 +364,12 @@ const rate = (s?: TestScore) => (s && s.runs ? s.passes / s.runs : 0);
 const score = (m: Measurement) => m.tests.reduce((n, t) => n + rate(t), 0);
 const pct = (m: Measurement) => (m.tests.length ? Math.round((score(m) / m.tests.length) * 100) : 0);
 
-/** A failing test counts as fixed when it now passes at least 60% of the time, a third more often than before. */
-const isFixed = (was: number, now: number) => was < 0.6 && now >= 0.6 && now - was >= 0.34;
+/**
+ * A failing test counts as fixed when it now passes at least 60% of the time, a third more often than before. One that
+ * failed now and then (2 of 3) counts as fixed when it now always passes: it's a target, and without this no candidate
+ * could ever fix it, so each was given up before its first run. The confirming runs still guard against luck.
+ */
+export const isFixed = (was: number, now: number) => (was < 0.6 && now >= 0.6 && now - was >= 0.34) || (was < 0.99 && now >= 0.99 && now - was >= 0.3);
 /** A test that always passed counts as broken when it now passes half the time or less. */
 const isBroken = (was: number, now: number) => was >= 0.99 && now <= 0.5;
 

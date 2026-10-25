@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ExternalLink } from "lucide-react";
+import { CalendarDays, Check, ExternalLink, Package, ReceiptText } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import type { ChatWidget as Widget, FieldSpec } from "@/core/widgets";
 
@@ -11,7 +11,7 @@ export function ChatWidget({ widget, agentId, conversationId, onSend }: { widget
       return <FormWidget widget={widget} agentId={agentId} conversationId={conversationId} />;
     case "button":
       return (
-        <a href={widget.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-full bg-[var(--c-accent)] px-4 py-2 text-sm font-medium text-[var(--c-accent-ink)]">
+        <a href={widget.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-lg bg-[var(--c-accent)] px-4 py-2 text-sm font-medium text-[var(--c-accent-ink)]">
           {widget.label} <ExternalLink className="size-3.5" />
         </a>
       );
@@ -19,19 +19,19 @@ export function ChatWidget({ widget, agentId, conversationId, onSend }: { widget
       return (
         <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
           {widget.items.map((item, i) => (
-            <div key={i} className="w-44 shrink-0 overflow-hidden rounded-xl border border-[var(--c-line)] bg-[var(--c-chip-bg)]">
+            <div key={i} className="w-48 shrink-0 overflow-hidden rounded-2xl border border-[var(--c-line)] bg-[var(--c-chip-bg)]">
               {item.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={item.image} alt="" className="h-24 w-full object-cover" />
               ) : (
-                <div className="h-16 bg-[var(--c-line)]" />
+                <div className="flex h-24 items-center justify-center bg-[var(--c-line)]/30"><Package className="size-7 text-[var(--c-muted)]" strokeWidth={1.25} /></div>
               )}
-              <div className="space-y-0.5 p-2.5 text-xs">
-                <p className="truncate text-sm font-semibold">{item.title}</p>
+              <div className="space-y-2 p-3.5 text-xs">
+                <p className="text-sm font-semibold">{item.title}</p>
                 {item.subtitle && <p className="line-clamp-2 text-[var(--c-muted)]">{item.subtitle}</p>}
                 {item.price && <p className="font-semibold">{item.price}</p>}
                 {item.link && (
-                  <a href={item.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[var(--c-accent)] hover:underline">
+                  <a href={item.link} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--c-line)] px-3 py-2 text-[var(--c-text)] hover:bg-[var(--c-line)]/40">
                     View <ExternalLink className="size-3" />
                   </a>
                 )}
@@ -42,11 +42,11 @@ export function ChatWidget({ widget, agentId, conversationId, onSend }: { widget
       );
     case "tracker":
       return (
-        <div className="rounded-xl border border-[var(--c-line)] bg-[var(--c-chip-bg)] p-3 text-xs">
+        <div className="rounded-2xl border border-[var(--c-line)] bg-[var(--c-chip-bg)] p-4 text-xs">
           {widget.title && <p className="mb-2 text-sm font-semibold">{widget.title}</p>}
-          <ol className="space-y-2">
+          <ol className="space-y-3">
             {widget.steps.map((step, i) => (
-              <li key={i} className="flex items-center gap-2">
+              <li key={i} aria-current={i === widget.current ? "step" : undefined} className="flex items-center gap-3">
                 <span className={`inline-flex size-5 items-center justify-center rounded-full text-[10px] font-semibold ${i <= widget.current ? "bg-[var(--c-accent)] text-[var(--c-accent-ink)]" : "border border-[var(--c-line)] text-[var(--c-muted)]"}`}>
                   {i < widget.current ? <Check className="size-3" /> : i + 1}
                 </span>
@@ -58,11 +58,11 @@ export function ChatWidget({ widget, agentId, conversationId, onSend }: { widget
       );
     case "slots":
       return (
-        <div>
-          {widget.title && <p className="mb-1.5 text-xs text-[var(--c-muted)]">{widget.title}</p>}
+        <div className="rounded-2xl border border-[var(--c-line)] bg-[var(--c-chip-bg)] p-4">
+          <p className="mb-3 flex items-center gap-2 text-sm font-medium"><CalendarDays className="size-4" />{widget.title || "Choose a time"}</p>
           <div className="flex flex-wrap gap-1.5">
             {widget.options.map((o) => (
-              <button key={o} type="button" onClick={() => onSend(o)} className="rounded-lg border border-[var(--c-accent)] px-3 py-1.5 text-xs font-medium text-[var(--c-accent)] hover:bg-[var(--c-accent)] hover:text-[var(--c-accent-ink)]">
+              <button key={o} type="button" onClick={() => onSend(o)} className="rounded-lg border border-[var(--c-line)] px-3 py-2.5 text-xs font-medium text-[var(--c-text)] hover:bg-[var(--c-accent)] hover:text-[var(--c-accent-ink)]">
                 {o}
               </button>
             ))}
@@ -94,11 +94,11 @@ export function ChatWidget({ widget, agentId, conversationId, onSend }: { widget
       );
     case "summary":
       return (
-        <div className="rounded-xl border border-[var(--c-line)] bg-[var(--c-chip-bg)] p-3 text-xs">
+        <div className="rounded-2xl border border-[var(--c-line)] bg-[var(--c-chip-bg)] p-4 text-xs">
           {widget.title && <p className="mb-2 text-sm font-semibold">{widget.title}</p>}
-          <dl className="space-y-1">
+          <div className="mb-3 flex items-center gap-2 text-[var(--c-muted)]"><ReceiptText className="size-4" /><span>Details</span></div><dl className="divide-y divide-[var(--c-line)]">
             {widget.rows.map((r) => (
-              <div key={r.label} className="flex justify-between gap-4">
+              <div key={r.label} className="flex justify-between gap-4 py-2.5">
                 <dt className="text-[var(--c-muted)]">{r.label}</dt>
                 <dd className="text-right font-medium">{r.value}</dd>
               </div>

@@ -17,7 +17,7 @@ export default async function ProceduresPage({ params }: PageProps<"/app/agents/
     <>
       <PageBar icon={<ListOrdered className="size-[18px]" />} title="Step-by-step guides" />
       <PageBody>
-        <ProceduresManager agentId={agent.id} initial={await listProcedures(agent.id)} actions={actions} />
+        <ProceduresManager industry={agent.config.industry} agentId={agent.id} initial={await listProcedures(agent.id)} actions={actions} />
       </PageBody>
     </>
   );

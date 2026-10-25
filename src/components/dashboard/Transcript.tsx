@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { ChatWidget as Widget } from "@/core/widgets";
 import { tokenCount } from "@/lib/models";
 import type { ActionCall, Citation } from "@/platform/chat/answer";
-import { RichText } from "../chat/RichText";
+import { ReadableOutput } from "../reports/ReadableOutput";
 
 export interface TranscriptMessage {
   id: number;
@@ -52,7 +52,7 @@ export function Transcript({ messages, agentName, onRevise }: { messages: Transc
         const fromAgent = m.role === "assistant";
         return (
           <li key={m.id} className={`group flex flex-col ${fromVisitor ? "items-end" : "items-start"}`}>
-            <p className="mb-1 flex items-center gap-1.5 text-[11px] font-medium text-subtle">
+            <p className="mb-2 flex flex-wrap items-center gap-1.5 text-[11px] font-medium text-subtle">
               {fromVisitor ? "Visitor" : m.role === "human" ? (m.author ?? "Your team") : agentName} · {new Date(m.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
               {fromAgent && m.confidence !== undefined && (
                 <span className={`rounded-full px-1.5 py-px text-[10px] font-semibold ${confidenceTone(m.confidence)}`} title="How sure the agent was">
@@ -64,10 +64,10 @@ export function Transcript({ messages, agentName, onRevise }: { messages: Transc
             </p>
             <div
               className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed [overflow-wrap:anywhere] ${
-                fromVisitor ? "rounded-br-md bg-brand text-brand-ink" : m.role === "human" ? "rounded-bl-md border border-[#c7d7fe] bg-[#eef3ff]" : "rounded-bl-md border border-line bg-panel"
+                fromVisitor ? "rounded-br-md bg-brand text-brand-ink" : m.role === "human" ? "rounded-bl-md border border-line bg-panel-2" : "rounded-bl-md border border-line bg-panel"
               }`}
             >
-              {fromVisitor ? <p className="whitespace-pre-wrap">{m.content}</p> : <RichText text={m.content} onCite={(n) => setOpen(open?.id === m.id && open.n === n ? null : { id: m.id, n })} />}
+              {fromVisitor ? <p className="whitespace-pre-wrap">{m.content}</p> : <ReadableOutput text={m.content} onCite={(n) => setOpen(open?.id === m.id && open.n === n ? null : { id: m.id, n })} />}
               {m.widgets && m.widgets.length > 0 && <p className="mt-2 text-xs text-muted">Showed: {m.widgets.map((w) => WIDGET_WORD[w.type]).join(", ")}</p>}
             </div>
             {fromAgent && (
@@ -88,12 +88,10 @@ export function Transcript({ messages, agentName, onRevise }: { messages: Transc
                   </button>
                 )}
                 {m.model && (
-                  <span className="text-subtle">
-                    {m.model.split("/").pop()} · {m.kept ? "answered from memory" : tokenCount(m.tokens ?? 0)}
-                  </span>
+                  <details className="text-subtle"><summary className="cursor-pointer">Response details</summary><p className="mt-1">{m.model.split("/").pop()} · {m.kept ? "answered from memory" : tokenCount(m.tokens ?? 0)}</p></details>
                 )}
                 {onRevise && (
-                  <button type="button" onClick={() => onRevise(m)} className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-ink opacity-0 transition hover:bg-panel-2 group-hover:opacity-100 focus:opacity-100">
+                  <button type="button" onClick={() => onRevise(m)} className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-ink transition hover:bg-panel-2">
                     <PencilLine className="size-3" /> Revise answer
                   </button>
                 )}
@@ -113,7 +111,7 @@ export function Transcript({ messages, agentName, onRevise }: { messages: Transc
                       {a.name} {a.error && <span className="text-bad">· {a.error}</span>}
                     </p>
                     <p className="mt-1 break-all text-muted">in: {a.arguments}</p>
-                    <p className="mt-0.5 line-clamp-4 break-all text-muted">out: {a.result}</p>
+                    <details className="mt-2"><summary className="cursor-pointer font-sans text-xs">View action result</summary><pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap break-all text-muted">{a.result}</pre></details>
                   </div>
                 ))}
               </div>

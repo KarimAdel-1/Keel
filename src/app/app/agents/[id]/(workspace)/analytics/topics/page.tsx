@@ -34,7 +34,7 @@ export default async function TopicsPage({ params, searchParams }: PageProps<"/a
           />
         ) : (
           <Panel title={`${total} conversation${total === 1 ? "" : "s"} by topic`} padded={false}>
-            <table className="w-full text-left text-sm">
+            <div className="overflow-x-auto"><table className="w-full min-w-[560px] text-left text-sm">
               <thead className="border-b border-line text-xs text-muted">
                 <tr>
                   <th className="px-4 py-2.5 font-medium">Topic</th>
@@ -64,7 +64,7 @@ export default async function TopicsPage({ params, searchParams }: PageProps<"/a
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </Panel>
         )}
       </PageBody>

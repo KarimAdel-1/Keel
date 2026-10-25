@@ -15,7 +15,7 @@ import { USE_CASES } from "./use-cases";
 type MenuKey = "product" | "solutions";
 
 /** The colours icons take in the menus, in turn, so a box of them doesn't read as one block. */
-const TONES = ["#2348d8", "#1f7a4d", "#e0662a", "#c48a0c", "#6d3fd1", "#0f8a8a", "#d23b5f", "#334155"];
+const TONES = ["#526174"];
 const tone = (i: number) => TONES[i % TONES.length];
 
 /** An icon on a soft square tinted with its own colour. */
