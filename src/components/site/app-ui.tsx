@@ -5,18 +5,18 @@
 // (src/components/chat/parts.tsx), for an imaginary business, Harbor Goods.
 
 import { CheckCircle2, XCircle } from "lucide-react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { AgentBubble, ChatFrame, InputShell, PoweredBy, SendButton, UserBubble, type ChatLook } from "../chat/parts";
 import { chatVars } from "../chat/look";
 import { RichText } from "../chat/RichText";
 import { Pill, Spinner } from "../ui";
-import { TypingDots } from "./motion";
+import { Caret, TypingDots } from "./motion";
 
-/** Harbor Goods' chat, as its customers see it: the bold style in its blue. */
+/** Harbor Goods' chat, as its customers see it: the classic style in Keel blue. */
 export const LOOK: ChatLook = {
   displayName: "Harbor Goods",
-  color: "#44546a",
-  style: "soft",
+  color: "#2348d8",
+  style: "classic",
   theme: "light",
   welcome: ["Hi! Welcome to Harbor Goods. How can I help?"],
   suggestions: [],
@@ -40,15 +40,41 @@ export function AppWindow({ icon, title, actions, children, className = "", body
   );
 }
 
-/** The chat window with its message box, as on a business's website. */
-export function ChatWindowShell({ children, name = LOOK.displayName, subtitle = "Usually answers in seconds", className = "" }: { children: ReactNode; name?: string; subtitle?: string; className?: string }) {
+/**
+ * The chat in the website's pictures, in the colours of its product pictures (globals.css, .product-demo): a white
+ * window, pale Keel-blue questions and light grey answers.
+ */
+const PICTURE_COLOURS = {
+  "--c-bg": "#ffffff",
+  "--c-header-bg": "#ffffff",
+  "--c-line": "#e3e7ec",
+  "--c-agent-bg": "#f4f6f9",
+  "--c-user-bg": "#edf1fd",
+  "--c-user-text": "#0b1530",
+  "--c-chip-bg": "#ffffff",
+  "--c-input-bg": "#ffffff",
+  "--c-input-line": "#e3e7ec",
+} as CSSProperties;
+
+/**
+ * The chat window with its message box, as on a business's website. A picture, so it never scrolls. `draft` is what the
+ * customer is typing into the box, with its cursor; send lights up once there's something to send.
+ */
+export function ChatWindowShell({ children, name = LOOK.displayName, subtitle = "Usually answers in seconds", className = "", draft }: { children: ReactNode; name?: string; subtitle?: string; className?: string; draft?: string }) {
   return (
-    <ChatFrame look={{ ...LOOK, displayName: name }} subtitle={subtitle} className={`rounded-2xl font-sans ${className}`}>
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">{children}</div>
+    <ChatFrame look={{ ...LOOK, displayName: name }} colours={PICTURE_COLOURS} subtitle={subtitle} className={`rounded-2xl font-sans ${className}`}>
+      <div className="relative min-h-0 flex-1 space-y-3 overflow-hidden px-4 py-4">{children}</div>
       <div className="px-3 pb-1.5">
         <InputShell>
-          <span className="flex-1 py-2 text-[14px] text-[var(--c-muted)]">{LOOK.placeholder}</span>
-          <SendButton disabled />
+          {draft === undefined ? (
+            <span className="flex-1 py-2 text-[14px] text-[var(--c-muted)]">{LOOK.placeholder}</span>
+          ) : (
+            <span className="flex-1 py-2 text-[14px]">
+              {draft}
+              <Caret />
+            </span>
+          )}
+          <SendButton disabled={!draft} />
         </InputShell>
       </div>
       <PoweredBy />
@@ -59,7 +85,7 @@ export function ChatWindowShell({ children, name = LOOK.displayName, subtitle = 
 /** Chat parts outside a chat window (a cropped view): they still need the window's colours. */
 export function ChatColours({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div style={chatVars(LOOK)} className={`font-sans text-[var(--c-text)] ${className}`}>
+    <div style={{ ...chatVars(LOOK), ...PICTURE_COLOURS }} className={`font-sans text-[var(--c-text)] ${className}`}>
       {children}
     </div>
   );

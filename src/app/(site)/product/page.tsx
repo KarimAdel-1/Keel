@@ -1,7 +1,7 @@
 import { BadgeCheck, History, Lock, ShieldCheck, TestTubes, Wand2 } from "lucide-react";
 import type { Metadata } from "next";
 import { HeroVisual } from "@/components/landing/visuals";
-import { Band, BuiltOn, CtaBand, LinkCards, PageHero, Pill, Points, SectionTitle } from "@/components/site/parts";
+import { Band, BuiltOn, CtaBand, LinkCards, PageHero, Pill, Points, SectionTitle, StepNumber } from "@/components/site/parts";
 import { StageGrid } from "@/components/site/StageGrid";
 import { USE_CASES } from "@/components/site/use-cases";
 import { currentUser } from "@/platform/session";
@@ -51,7 +51,7 @@ export default async function ProductPage() {
         <ol className="mx-auto mt-14 grid max-w-[1040px] gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
           {EVERY_MESSAGE.map((s, i) => (
             <li key={s.title} className="flex gap-4">
-              <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-[#111214] text-[14px] font-medium text-white">{i + 1}</span>
+              <StepNumber n={i + 1} />
               <div>
                 <h3 className="text-[16px] font-medium tracking-[-0.01em]">{s.title}</h3>
                 <p className="mt-1.5 text-[14px] leading-relaxed text-[#5b5f66]">{s.text}</p>

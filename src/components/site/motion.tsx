@@ -1,11 +1,11 @@
 "use client";
 
-// The website's pictures play like short videos: each one steps through a timeline that loops while it's on screen.
-// Smooth movement comes from CSS transitions between steps; numbers count with requestAnimationFrame. Visitors whose
-// device asks for less motion see each picture's finished state, still.
+// The website's pictures play like short videos, on a playhead that loops while they're on screen: a customer types into
+// the message box and sends, the agent writes, its answer streams in a word at a time, tests run and pass. They play for
+// every visitor, whatever their device's motion setting. Numbers count with requestAnimationFrame.
 
 import { MousePointer2 } from "lucide-react";
-import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 
 const REDUCED = "(prefers-reduced-motion: reduce)";
 const subscribe = (change: () => void) => {
@@ -24,16 +24,14 @@ export function useReducedMotion(): boolean {
 }
 
 /**
- * A looping timeline: `steps[i]` is how long step i lasts, in milliseconds. Returns the current step, how many loops
- * have played (to restart counters), and a ref for the element whose visibility runs the clock. With less motion, it
- * stays on `rest` (the last step unless given).
+ * A looping playhead: how far into its loop of `length` ms the picture is, ticking about 25 times a second while the
+ * element (`ref`) is on screen, and picking up where it left off when it comes back.
  */
-export function useLoop(steps: readonly number[], rest = steps.length - 1) {
+export function usePlayhead(length: number) {
   const ref = useRef<HTMLDivElement>(null);
-  const [step, setStep] = useState(0);
-  const [loops, setLoops] = useState(0);
+  const [t, setT] = useState(0);
+  const at = useRef(0);
   const [visible, setVisible] = useState(false);
-  const reduced = useReducedMotion();
 
   useEffect(() => {
     const el = ref.current;
@@ -44,26 +42,86 @@ export function useLoop(steps: readonly number[], rest = steps.length - 1) {
   }, []);
 
   useEffect(() => {
-    if (!visible || reduced) return;
-    const timer = setTimeout(() => {
-      const next = (step + 1) % steps.length;
-      if (next === 0) setLoops((l) => l + 1);
-      setStep(next);
-    }, steps[step]);
-    return () => clearTimeout(timer);
-  }, [step, visible, reduced, steps]);
+    if (!visible) return;
+    const began = performance.now() - at.current;
+    const timer = setInterval(() => {
+      at.current = (performance.now() - began) % length;
+      setT(at.current);
+    }, 40);
+    return () => clearInterval(timer);
+  }, [visible, length]);
 
-  return { ref, step: reduced ? rest : step, loops, still: reduced };
+  return { ref, t };
 }
 
-/** Shows its children when `on`, fading and sliding them in; hides them the same way. */
-export function Reveal({ on, children, className = "", from = "up", as = "div", style }: { on: boolean; children: ReactNode; className?: string; from?: "up" | "left" | "right" | "scale" | "none"; as?: "div" | "span"; style?: CSSProperties }) {
-  const hidden = { up: "translate-y-2", left: "-translate-x-3", right: "translate-x-3", scale: "scale-95", none: "" }[from];
-  const Tag = as;
+/** The step a playhead is in, when a picture moves in steps: `steps[i]` is how long step i lasts. */
+export function stepAt(t: number, steps: readonly number[]): number {
+  let end = 0;
+  for (let i = 0; i < steps.length; i++) {
+    end += steps[i];
+    if (t < end) return i;
+  }
+  return steps.length - 1;
+}
+
+/** How fast people type (ms a character) and answers stream in (ms a word). */
+const TYPE = 42;
+const STREAM = 65;
+
+const wordsOf = (text: string) => text.match(/\S+\s*/g) ?? [];
+
+/** How long a person takes to type `text`, and an answer takes to stream in. */
+export const typingTime = (text: string) => text.length * TYPE;
+export const streamingTime = (text: string) => wordsOf(text).length * STREAM;
+
+/** What a person has typed of `text` by `t`, having started at `from`. */
+export const typedAt = (text: string, t: number, from: number) => text.slice(0, Math.max(0, Math.floor((t - from) / TYPE)));
+
+/** What has streamed in of an answer by `t`, having started at `from`: a word at a time. */
+export const streamedAt = (text: string, t: number, from: number) => wordsOf(text).slice(0, Math.max(0, Math.floor((t - from) / STREAM))).join("");
+
+/**
+ * When each part of one exchange happens, from `start`: the customer types the question and sends it, the agent writes
+ * (its dots show), then its answer streams in until `answered`.
+ */
+export function exchangeAt(question: string, answer: string, start: number) {
+  const sent = start + typingTime(question) + 450;
+  const answering = sent + 1400;
+  return { start, sent, answering, answered: answering + streamingTime(answer) };
+}
+
+/** A text cursor, blinking where the next character goes. */
+export function Caret() {
+  return <span aria-hidden className="site-caret" />;
+}
+
+/** Shows its children when `on`, with a quick fade, keeping their place either way so nothing around them moves. */
+export function Appear({ on, children, className = "" }: { on: boolean; children: ReactNode; className?: string }) {
+  return <div className={`transition-opacity duration-300 ${on ? "opacity-100" : "pointer-events-none opacity-0"} ${className}`}>{children}</div>;
+}
+
+/**
+ * An answer as it streams in, a word at a time from `from`. Its whole text holds its place, unseen, so nothing moves as
+ * the words arrive; the agent's dots show in that place while it's still writing (from `writing`).
+ */
+export function Streamed({ text, t, from, writing, after, className = "" }: { text: string; t: number; from: number; writing?: number; after?: ReactNode; className?: string }) {
+  const shown = streamedAt(text, t, from);
   return (
-    <Tag className={`transition-all duration-500 ease-out ${on ? "translate-x-0 translate-y-0 scale-100 opacity-100" : `pointer-events-none opacity-0 ${hidden}`} ${className}`} style={style}>
-      {children}
-    </Tag>
+    <div className={`relative ${className}`}>
+      <span className="invisible">
+        {text}
+        {after}
+      </span>
+      <span className="absolute inset-0">
+        {shown}
+        {t >= from + streamingTime(text) && after}
+      </span>
+      {writing !== undefined && t >= writing && t < from && (
+        <span className="absolute left-0 top-0 flex h-[1.7em] items-center">
+          <TypingDots />
+        </span>
+      )}
+    </div>
   );
 }
 

@@ -24,6 +24,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { DraftVisual, HeroVisual, LayoutMenuVisual, SourceVisual, TestRunVisual } from "@/components/landing/visuals";
 import { BuiltOn, CtaBand, Faq, LinkCards, Pill, SectionTitle } from "@/components/site/parts";
+import { DemoCaption } from "@/components/site/ProductDemo";
 import { StageGrid } from "@/components/site/StageGrid";
 import { USE_CASES } from "@/components/site/use-cases";
 import { BRAND } from "@/core/brand";
@@ -180,6 +181,7 @@ export default async function Home() {
                 figure: "20",
                 note: "Customers in one test run, each with their own question and mood",
                 visual: <TestRunVisual />,
+                kind: "testRun" as const,
               },
               {
                 title: "See where every answer comes from",
@@ -187,18 +189,22 @@ export default async function Home() {
                 figure: "1 click",
                 note: "From any answer to the exact passage it used",
                 visual: <SourceVisual />,
+                kind: "source" as const,
               },
             ].map((card) => (
-              <div key={card.title} className="overflow-hidden rounded-[22px] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-                <div className="px-8 pb-8 pt-9">
-                  <h3 className="text-[19px] font-normal tracking-[-0.01em]">{card.title}</h3>
-                  <p className="mt-5 text-[40px] font-normal leading-none tracking-[-0.03em] text-[#2348d8]">{card.figure}</p>
-                  <p className="mt-4 text-[14px] text-[#5b5f66]">{card.note}</p>
-                  <Link href={card.href} className="mt-6 inline-flex items-center gap-1.5 text-[13px] font-medium text-[#2348d8] hover:underline">
-                    Learn more <ArrowRight className="size-3.5" />
-                  </Link>
+              <div key={card.title} className="flex flex-col">
+                <div className="flex flex-1 flex-col overflow-hidden rounded-[22px] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+                  <div className="px-8 pb-8 pt-9">
+                    <h3 className="text-[19px] font-normal tracking-[-0.01em]">{card.title}</h3>
+                    <p className="mt-5 text-[40px] font-normal leading-none tracking-[-0.03em] text-[#2348d8]">{card.figure}</p>
+                    <p className="mt-4 text-[14px] text-[#5b5f66]">{card.note}</p>
+                    <Link href={card.href} className="mt-6 inline-flex items-center gap-1.5 text-[13px] font-medium text-[#2348d8] hover:underline">
+                      Learn more <ArrowRight className="size-3.5" />
+                    </Link>
+                  </div>
+                  {card.visual}
                 </div>
-                {card.visual}
+                <DemoCaption kind={card.kind} />
               </div>
             ))}
           </div>

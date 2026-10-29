@@ -10,7 +10,7 @@ const display = DM_Sans({ subsets: ["latin"], weight: ["400", "500", "600", "700
 export default async function SiteLayout({ children }: { children: ReactNode }) {
   const user = await currentUser();
   return (
-    <div className={`${display.variable} flex flex-1 flex-col bg-white text-[#111214] [font-family:var(--font-display)]`}>
+    <div className={`${display.variable} site flex flex-1 flex-col bg-white text-[var(--ink-navy)] [font-family:var(--font-display)]`}>
       <SiteHeader signedIn={Boolean(user)} />
       <main className="flex-1">{children}</main>
       <SiteFooter start={user ? "/app" : "/signup"} signedIn={Boolean(user)} />

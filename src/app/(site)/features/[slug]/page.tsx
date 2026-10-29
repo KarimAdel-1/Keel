@@ -103,8 +103,8 @@ export default async function FeaturePageView({ params }: PageProps<"/features/[
         actions={
           <>
             <Pill href={start}>{user ? "Open your dashboard" : "Try it for free"}</Pill>
-            <Pill href="/features" variant="outline">
-              All features
+            <Pill href="/product" variant="outline">
+              Product overview
             </Pill>
           </>
         }

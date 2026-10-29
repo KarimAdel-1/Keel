@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { featureBySlug } from "@/components/site/features";
 import { INDUSTRY_PAGES, isSiteIndustry } from "@/components/site/industries";
-import { Band, CtaBand, LinkCards, PageHero, Pill, Points, SectionTitle } from "@/components/site/parts";
+import { Band, CtaBand, LinkCards, PageHero, Pill, Points, SectionTitle, StepNumber } from "@/components/site/parts";
 import { USE_CASES, caseBySlug } from "@/components/site/use-cases";
 import { ExampleChat } from "@/components/site/visuals";
 import { INDUSTRY_PRESETS } from "@/core/industries";
@@ -61,11 +61,11 @@ export default async function UseCasePage({ params }: PageProps<"/use-cases/[slu
             const feature = featureBySlug(s.feature);
             return (
               <li key={s.title} className="flex flex-col rounded-[18px] border border-[#eceef2] bg-white p-6 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-                <span className="inline-flex size-9 items-center justify-center rounded-full bg-[#111214] text-[14px] font-medium text-white">{i + 1}</span>
+                <StepNumber n={i + 1} />
                 <h3 className="mt-4 text-[16px] font-medium tracking-[-0.01em]">{s.title}</h3>
                 <p className="mt-1.5 flex-1 text-[14px] leading-relaxed text-[#5b5f66]">{s.text}</p>
                 {feature && (
-                  <Link href={`/features/${feature.slug}`} className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-medium text-[#2348d8] hover:underline">
+                  <Link href={`/features/${feature.slug}`} className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--accent)] hover:underline">
                     {feature.name} <ArrowRight className="size-3.5" />
                   </Link>
                 )}
@@ -83,7 +83,7 @@ export default async function UseCasePage({ params }: PageProps<"/use-cases/[slu
               A test like this one sends an AI customer to your agent, and a judge checks the conversation against your own information. Keel can write a crowd of them for you from what your agent knows.
             </p>
             <div className="mt-7">
-              <Link href="/features/testing" className="inline-flex items-center gap-1.5 text-[14px] font-medium text-[#2348d8] hover:underline">
+              <Link href="/features/testing" className="inline-flex items-center gap-1.5 text-[14px] font-medium text-[var(--accent)] hover:underline">
                 How tests work <ArrowRight className="size-4" />
               </Link>
             </div>
@@ -116,8 +116,8 @@ export default async function UseCasePage({ params }: PageProps<"/use-cases/[slu
             {industries.map((slug) => {
               const IIcon = INDUSTRY_PAGES[slug].icon;
               return (
-                <Link key={slug} href={`/industries/${slug}`} className="inline-flex items-center gap-2 rounded-full border border-[#e4e6ea] px-4 py-2 text-[14px] hover:border-[#2348d8] hover:text-[#2348d8]">
-                  <IIcon className="size-4 text-[#2348d8]" /> {INDUSTRY_PRESETS[slug].label}
+                <Link key={slug} href={`/industries/${slug}`} className="inline-flex items-center gap-2 rounded-full border border-[#e4e6ea] px-4 py-2 text-[14px] hover:border-[var(--accent)] hover:text-[var(--accent)]">
+                  <IIcon className="size-4 text-[var(--accent)]" /> {INDUSTRY_PRESETS[slug].label}
                 </Link>
               );
             })}

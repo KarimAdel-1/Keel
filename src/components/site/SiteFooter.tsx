@@ -2,6 +2,7 @@ import { Globe } from "lucide-react";
 import Link from "next/link";
 import { INDUSTRY_PRESETS } from "@/core/industries";
 import { FEATURES } from "./features";
+import { FooterLogo } from "./FooterLogo";
 import { SITE_INDUSTRIES } from "./industries";
 import { USE_CASES } from "./use-cases";
 
@@ -10,7 +11,6 @@ const COLUMNS: { title: string; links: [string, string][] }[] = [
     title: "Product",
     links: [
       ["Overview", "/product"],
-      ["All features", "/features"],
       ["Technology", "/technology"],
       ["FAQ", "/#faq"],
     ],
@@ -29,17 +29,22 @@ const COLUMNS: { title: string; links: [string, string][] }[] = [
   },
 ];
 
+/**
+ * The footer: the way in, every page of the site, Keel's logo in moving water under them, and the small print, with
+ * the logo's grain over all of it so the logo sits on the footer's own navy.
+ */
 export function SiteFooter({ start, signedIn }: { start: string; signedIn: boolean }) {
   return (
-    <footer className="bg-[#0f1012] text-white">
+    <footer className="relative overflow-hidden bg-[#040b1f] text-white">
+      <div aria-hidden className="footer-grain" />
       <div className="mx-auto w-full max-w-[1200px] px-5 pt-16 sm:px-8">
         <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1.2fr_1fr]">
           <div>
             <p className="text-[20px] font-bold tracking-[-0.04em]">
-              keel<span className="text-[#6f8cff]">.</span>
+              keel<span className="text-[var(--teal-bright)]">.</span>
             </p>
             <p className="mt-4 max-w-[220px] text-[13px] leading-relaxed text-white/60">AI agents for your business, built on NVIDIA Nemotron.</p>
-            <Link href={start} className="mt-6 inline-flex rounded-lg border border-white/25 px-4 py-2 text-[13px] hover:bg-white hover:text-[#111214]">
+            <Link href={start} className="mt-6 inline-flex rounded-lg border border-white/25 px-4 py-2 text-[13px] hover:border-[var(--teal-bright)] hover:text-[var(--teal-bright)]">
               {signedIn ? "Open your dashboard" : "Create your agent"}
             </Link>
           </div>
@@ -64,7 +69,10 @@ export function SiteFooter({ start, signedIn }: { start: string; signedIn: boole
             </div>
           ))}
         </div>
-        <div className="mt-16 flex flex-wrap items-center justify-between gap-4 border-t border-white/15 py-7 text-[13px] text-white/60">
+        <div className="mt-16">
+          <FooterLogo />
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/15 py-7 text-[13px] text-white/60">
           <span className="inline-flex items-center gap-2">
             <Globe className="size-4" /> English
           </span>

@@ -1,5 +1,5 @@
 import { ArrowUp, RotateCw, X } from "lucide-react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { inkFor } from "@/core/agents";
 import { chatVars, type ChatLook } from "./look";
 
@@ -29,6 +29,7 @@ export function ChatFrame({
   onClose,
   children,
   className = "",
+  colours,
 }: {
   look: ChatLook;
   subtitle?: string;
@@ -37,10 +38,12 @@ export function ChatFrame({
   onClose?: () => void;
   children: ReactNode;
   className?: string;
+  /** Colours that stand in for the look's own (the website's pictures of the chat). */
+  colours?: CSSProperties;
 }) {
   return (
     <section
-      style={chatVars(look)}
+      style={{ ...chatVars(look), ...colours }}
       className={`flex min-h-0 flex-col overflow-hidden border border-[var(--c-line)] bg-[var(--c-bg)] text-[var(--c-text)] shadow-raised ${className}`}
       data-style={look.style}
       data-theme={look.theme}

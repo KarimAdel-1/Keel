@@ -263,7 +263,6 @@ Measured on the made-up demo business (`npm run demo`) on the real models, 21 an
 ## Accessibility
 
 - The chat announces new messages to screen readers as they arrive, and its controls (send, stop, photo, close) have labels.
-- The website's moving pictures stand still for visitors who ask their device for less motion.
 - The chat comes in light and dark themes, and the agent answers in the language each customer writes in.
 - Plain words throughout the dashboard, for owners who aren't technical: goals instead of settings, and a to-do list instead of a checklist of features.
 - Next: a keyboard-only pass over the dashboard, and a contrast check of the four chat styles in both themes.
