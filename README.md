@@ -16,7 +16,7 @@ Every model call runs on NVIDIA Nemotron, served by Nebius Token Factory.
 
 <br>
 
-![Keel's Try it page: the demo shop's agent reads a customer's photo of a cracked mug with Nemotron 3.5 Super VL and answers with the shop's breakage policy](docs/images/try-it.png)
+![Keel's Try it page: the demo shop's agent reads a customer's photo of a chipped mug with Nemotron 3.5 Super VL and answers with the shop's breakage policy](docs/images/try-it.png)
 
 | | |
 | --- | --- |
@@ -60,18 +60,18 @@ flowchart LR
 <table>
   <tr>
     <td width="50%"><img src="docs/images/tests.png" alt="Tests: twelve AI-customer tests, each with its result and score, and a button to fix the failing ones"></td>
-    <td width="50%"><img src="docs/images/quality.png" alt="Quality: answers 9.1 out of 10, tests 12 of 12 match the business's information, judges caught 5 of 5 planted mistakes"></td>
+    <td width="50%"><img src="docs/images/quality.png" alt="Quality: answers 10 out of 10, tests 12 of 12 match what the agent knows, judges caught 4 of 5 planted mistakes"></td>
   </tr>
   <tr>
     <td><b>Tests.</b> AI customers written from what the agent knows; every fact judged. Failing tests go straight to Improve.</td>
     <td><b>Quality.</b> Answers graded blind next to the best Keel can give; the tests and the judges are checked too.</td>
   </tr>
   <tr>
-    <td><img src="docs/images/home.png" alt="Home: a to-do list ordered by what would leave customers stuck, and goals to switch on in plain words"></td>
+    <td><img src="docs/images/home.png" alt="Home: conversations, handovers, answer quality and tests passed at a glance, the failing test to look at, and what needs attention"></td>
     <td><img src="docs/images/try-it.png" alt="Try it: the agent's settings beside a live chat, with the model and sources under each answer"></td>
   </tr>
   <tr>
-    <td><b>Home.</b> What would leave customers stuck comes first; goals are switched on in plain words.</td>
+    <td><b>Home.</b> How the agent is doing at a glance; what would leave customers stuck comes first.</td>
     <td><b>Try it.</b> Each answer shows its sources, the procedure it followed and the Nemotron model that wrote it.</td>
   </tr>
 </table>

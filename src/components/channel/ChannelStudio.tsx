@@ -467,7 +467,7 @@ function OverviewTab({ agentId, draft, set, sources, channel }: { agentId: strin
         <Heading>Speed and care</Heading>
         <div className="relative">
           <Cpu className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-          <select value={draft.model} onChange={(e) => set({ model: e.target.value as AgentModel })} className="field appearance-none py-2.5 pl-9 pr-9" aria-label="Speed and care">
+          <select value={draft.model} onChange={(e) => set({ model: e.target.value as AgentModel })} className="field appearance-none py-2.5 pl-9 pr-9 text-[13px]" aria-label="Speed and care">
             {MODEL_KEYS.map((k) => (
               <option key={k} value={k}>
                 {MODELS[k].plain} · {MODELS[k].name}
