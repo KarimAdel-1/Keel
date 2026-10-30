@@ -25,8 +25,8 @@ Every model call runs on NVIDIA Nemotron, served by Nebius Token Factory.
 | **NVIDIA open models** | Nemotron 3 Nano, Nemotron 3.5 Lightning, Nemotron 3 Super, Nemotron 3 Ultra, each with its own jobs, and Nemotron 3.5 Super VL for pictures |
 | **NVIDIA tools** | NeMo Guardrails on every conversation; garak for security scans |
 | **Agents** | 23 agents; the customer turn, testing, quality, improvement and the Copilot are LangGraph graphs, and every model call goes through LangChain |
-| **Demo** | _link added at submission_ |
-| **Video** | _link added at submission_ |
+| **Demo** | [keel.objective-s.co](https://keel.objective-s.co/) |
+| **Video** | [youtu.be/yagreBLLkm8](https://youtu.be/yagreBLLkm8) |
 | **Licence** | [Apache 2.0](LICENSE) |
 
 ## Why Keel
