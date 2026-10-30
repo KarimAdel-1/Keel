@@ -70,15 +70,33 @@ body {
   color: var(--text);
 }
 
+@layer base {
+  /* Everything that can be pressed shows the hand. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  select,
+  input[type="checkbox"],
+  input[type="radio"] {
+    cursor: pointer;
+  }
+  /* No ring around a field you're typing in: its own border shows it (.field turns Keel blue). */
+  :is(input, select, textarea):focus,
+  :is(input, select, textarea):focus-visible {
+    outline: none;
+  }
+}
+
 @layer components {
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
   }
+  /* The main action on a screen, in Keel blue as on the website. */
   .btn-primary {
-    @apply bg-ink text-white shadow-sm hover:bg-ink-hover;
+    @apply bg-brand text-brand-ink hover:bg-brand-hover;
   }
   .btn-brand {
-    @apply bg-brand text-brand-ink shadow-sm hover:bg-brand-hover;
+    @apply bg-brand text-brand-ink hover:bg-brand-hover;
   }
   .btn-secondary {
     @apply border border-line-strong bg-panel text-text shadow-sm hover:bg-panel-2;
@@ -93,7 +111,7 @@ body {
     @apply rounded-xl border border-line bg-panel shadow-sm;
   }
   .field {
-    @apply w-full rounded-lg border border-line-strong bg-panel px-3 py-2 text-sm shadow-sm outline-none transition placeholder:text-subtle focus:border-brand focus:ring-3 focus:ring-brand/15;
+    @apply w-full rounded-lg border border-line-strong bg-panel px-3 py-2 text-sm shadow-sm outline-none transition placeholder:text-subtle focus:border-brand;
   }
   .label {
     @apply mb-1.5 block text-sm font-medium;
@@ -182,32 +200,35 @@ body {
   100% { transform: translate(0, 0); }
 }
 
-/* Dashboard-only theme; public website and customer-selected chat colours stay independent. */
+/*
+ * Dashboard-only theme, in the website's colours: Keel blue for the way forward and for what's selected, cool greys
+ * with a touch of blue, navy text, and the website's light blue-to-teal gradient behind the sidebar. The public website
+ * and customer-selected chat colours stay independent.
+ */
 .dashboard {
-  --bg: #fcfcfd;
+  --bg: #fafbff;
   --panel: #fff;
-  --panel-2: #f4f6f8;
-  --panel-3: #e5e9ee;
-  --line: #e7eaee;
-  --line-strong: #ccd2db;
-  --text: #1c2435;
-  --muted: #626b7b;
-  --subtle: #727d8e;
-  --brand: #465977;
-  --brand-hover: #35465f;
-  --brand-tint: #edf1f5;
-  --ink: #293244;
-  --ink-hover: #1c2435;
-  --nav-active: #d8e2ec;
-  --shadow-card: 0 2px 7px rgb(28 36 53 / 0.025);
-  --shadow-raised: 0 12px 40px rgb(28 36 53 / 0.12);
+  --panel-2: #f3f6fc;
+  --panel-3: #e3e9f5;
+  --line: #e3e8f2;
+  --line-strong: #cbd4e4;
+  --text: #0b1530;
+  --muted: #5b6478;
+  --subtle: #737d91;
+  --brand: #2348d8;
+  --brand-hover: #1c3bb8;
+  --brand-tint: #edf1fd;
+  --ink: #0b1530;
+  --ink-hover: #1b2747;
+  --nav-active: #dde6fb;
+  --shadow-card: 0 2px 7px rgb(11 21 48 / 0.03);
+  --shadow-raised: 0 12px 40px rgb(11 21 48 / 0.12);
 }
-.dashboard-sidebar { background: linear-gradient(165deg, #eaf0f5 0%, #f0f1f3 65%, #fbf0e9 100%); }
+.dashboard-sidebar { background: linear-gradient(165deg, #e8efff 0%, #f1f5fd 55%, #e6f6f3 100%); }
 .dashboard .card { border-radius: 16px; }
 .dashboard .btn { min-height: 36px; font-weight: 500; border-radius: 9px; }
-.dashboard .btn-primary { box-shadow: 0 2px 3px rgb(28 36 53 / 0.12); }
 .dashboard .field { box-shadow: none; background: #fcfdfe; }
-.dashboard :is(button, a, summary, input, select, textarea):focus-visible { outline: 2px solid #556b8a; outline-offset: 3px; }
+.dashboard :is(button, a, summary):focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
 .dashboard summary { cursor: pointer; }
 .dashboard summary::marker { color: var(--muted); }
 .dashboard th { background: #f8f9fb; }

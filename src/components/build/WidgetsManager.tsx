@@ -84,7 +84,7 @@ export function WidgetsManager({
       <article key={s.name} className="card flex flex-col overflow-hidden">
         <div
           className="pointer-events-none h-56 overflow-hidden border-b border-line bg-panel-2/50 p-4 text-[13px]"
-          style={{ ...chatVars({ color: "#465977", theme: "light", style: "classic" }), color: "var(--c-text)" }}
+          style={{ ...chatVars({ color: "#2348d8", theme: "light", style: "classic" }), color: "var(--c-text)" }}
           inert
         >
           {preview && <ChatWidget widget={preview} agentId={agentId} onSend={() => {}} />}
@@ -163,7 +163,7 @@ export function WidgetsManager({
                   <article key={w.id} className="card overflow-hidden">
                     <div
                       className="pointer-events-none h-56 overflow-hidden border-b border-line bg-panel-2/50 p-4"
-                      style={{ ...chatVars({ color: "#465977", theme: "light", style: "classic" }), color: "var(--c-text)" }}
+                      style={{ ...chatVars({ color: "#2348d8", theme: "light", style: "classic" }), color: "var(--c-text)" }}
                       inert
                     >
                       {preview ? (

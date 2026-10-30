@@ -238,7 +238,7 @@ function SideLink({ href, active, icon, label, mini, trailing }: { href: string;
       href={href}
       aria-current={active ? "page" : undefined}
       title={mini ? label : undefined}
-      className={`flex items-center gap-3 rounded-lg py-2 text-[14px] transition ${mini ? "justify-center px-2" : "px-2.5"} ${active ? "bg-[var(--nav-active)] font-medium text-text" : "text-[#26282d] hover:bg-panel-2"}`}
+      className={`flex items-center gap-3 rounded-lg py-2 text-[14px] transition ${mini ? "justify-center px-2" : "px-2.5"} ${active ? "bg-[var(--nav-active)] font-medium text-brand" : "text-[#26282d] hover:bg-panel-2"}`}
     >
       {icon}
       {!mini && <span className="flex-1 truncate">{label}</span>}
@@ -296,7 +296,7 @@ function NavRow({ item, base, pathname, mini }: { item: NavItem; base: string; p
             const active = isActive(c.path);
             return (
               <li key={c.path}>
-                <Link href={href} aria-current={active ? "page" : undefined} className={`block rounded-md px-2.5 py-1.5 text-[13px] transition ${active ? "bg-[var(--nav-active)] font-medium text-text" : "text-muted hover:bg-panel-2 hover:text-text"}`}>
+                <Link href={href} aria-current={active ? "page" : undefined} className={`block rounded-md px-2.5 py-1.5 text-[13px] transition ${active ? "bg-[var(--nav-active)] font-medium text-brand" : "text-muted hover:bg-panel-2 hover:text-text"}`}>
                   {c.label}
                 </Link>
               </li>
@@ -411,7 +411,7 @@ function GettingStarted({ steps, href }: { steps: SidebarAgent["steps"]; href: s
       </span>
       <span className="mt-2.5 flex gap-1">
         {steps.map((s) => (
-          <span key={s.title} className={`h-1 flex-1 rounded-full ${s.done ? "bg-ink" : "bg-panel-3"}`} />
+          <span key={s.title} className={`h-1 flex-1 rounded-full ${s.done ? "bg-brand" : "bg-panel-3"}`} />
         ))}
       </span>
     </Link>
